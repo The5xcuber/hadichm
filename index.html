@@ -14,6 +14,7 @@
         .btn { padding: 12px 30px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; border:none; }
         #chat-screen { display: none; flex-direction: column; height: 100%; }
         header { background: var(--header); padding: 15px; font-weight: bold; border-bottom: 1px solid #374045; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
         #typing-indicator { font-size: 12px; color: #00a884; height: 15px; font-weight: normal; margin-top: 5px; }
         #msg-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
         .bubble { padding: 8px 12px; border-radius: 10px; max-width: 75%; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.2); word-wrap: break-word; }
@@ -21,6 +22,7 @@
         .received { align-self: flex-start; background: var(--friend-msg); border-top-left-radius: 0; }
         #input-area { background: var(--header); padding: 10px; display: flex; align-items: center; gap: 10px; }
         #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 20px; color: white; outline: none; }
+        #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 10px; font-size: 10px; padding: 5px 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -35,9 +37,9 @@
 
     <div id="chat-screen">
         <header>
-            <div style="display:flex; justify-content:space-between;">
+            <div class="header-top">
                 <span>Chatting: <span id="user-display" style="color:#00a884;"></span></span>
-                <button onclick="location.reload()" style="background:none; border:none; color:#ff5e5e; cursor:pointer;">Logout</button>
+                <button id="admin-reset" onclick="masterReset()">RESET CHAT</button>
             </div>
             <div id="typing-indicator"></div>
         </header>
@@ -51,7 +53,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, setDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, setDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCaXxH4g_RJUazSlkimpHHOKFohn2MVMM8",
@@ -83,7 +85,8 @@
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
             
-            // This triggers the "Allow Notifications" box
+            if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
+
             OneSignalDeferred.push(function(OneSignal) {
                 OneSignal.Notifications.requestPermission();
             });
@@ -99,10 +102,7 @@
         try {
             await fetch("https://onesignal.com/api/v1/notifications", {
                 method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": `Basic ${ONESIGNAL_REST_KEY}` 
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
                 body: JSON.stringify({
                     app_id: ONESIGNAL_ID,
                     included_segments: ["All"],
@@ -137,6 +137,15 @@
             time: serverTimestamp()
         });
         triggerNotification(`New message from ${currentUser}`);
+    };
+
+    window.masterReset = async () => {
+        if (!confirm("Wipe all messages for everyone?")) return;
+        const q = query(collection(db, "chats"));
+        const snap = await getDocs(q);
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
     };
 
     function startListening() {
