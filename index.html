@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Private Chat</title>
-    
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.SDK.sw.js" defer></script>
-
     <style>
         :root { --bg: #0b141a; --header: #202c33; --my-msg: #005c4b; --friend-msg: #202c33; --text: #e9edef; }
         body { font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); margin: 0; display: flex; justify-content: center; height: 100dvh; overflow: hidden; }
@@ -15,7 +13,9 @@
         input[type="text"] { padding: 12px; width: 85%; border: none; border-radius: 8px; background: #2a3942; color: white; margin: 10px 0; font-size: 16px; outline: none; }
         .btn { padding: 12px 30px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
         #chat-screen { display: none; flex-direction: column; height: 100%; }
-        header { background: var(--header); padding: 15px; font-weight: bold; border-bottom: 1px solid #374045; display: flex; justify-content: space-between; align-items: center; }
+        header { background: var(--header); padding: 15px; font-weight: bold; border-bottom: 1px solid #374045; display: flex; flex-direction: column; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        #typing-indicator { font-size: 12px; color: #00a884; height: 15px; font-weight: normal; margin-top: 5px; }
         #msg-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
         .bubble { padding: 8px 12px; border-radius: 10px; max-width: 75%; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.2); word-wrap: break-word; }
         .sent { align-self: flex-end; background: var(--my-msg); border-top-right-radius: 0; }
@@ -30,7 +30,6 @@
     </style>
 </head>
 <body>
-
 <div id="app">
     <div id="auth-screen">
         <h2 style="color: #00a884;">Private Chat</h2>
@@ -38,11 +37,13 @@
         <button class="btn" onclick="login()">Login</button>
         <p id="error" style="color:#ff5e5e; display:none; margin-top:10px;">Unauthorized</p>
     </div>
-
     <div id="chat-screen">
         <header>
-            <div>Chatting: <span id="user-display" style="color:#00a884;"></span></div>
-            <button id="admin-reset" onclick="masterReset()">RESET CHAT</button>
+            <div class="header-top">
+                <div>Chatting: <span id="user-display" style="color:#00a884;"></span></div>
+                <button id="admin-reset" onclick="masterReset()">RESET CHAT</button>
+            </div>
+            <div id="typing-indicator"></div>
         </header>
         <div id="upload-container">
             <div style="font-size:11px;">Uploading: <span id="percent">0%</span></div>
@@ -58,12 +59,9 @@
         </div>
     </div>
 </div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } 
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
+    import { getFirestore, collection, addDoc, doc, setDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     const firebaseConfig = {
         apiKey: "AIzaSyCaXxH4g_RJUazSlkimpHHOKFohn2MVMM8",
         authDomain: "chatwithchaudry.firebaseapp.com",
@@ -72,19 +70,16 @@
         messagingSenderId: "874432806654",
         appId: "1:874432806654:web:cfd8fb88a25091e8722faf"
     };
-
     const CLOUD_NAME = "dhaydp4rq";
     const UPLOAD_PRESET = "ml_default"; 
-    
     const ONESIGNAL_ID = "de8b239e-81c0-4155-af2e-74209e3dd440"; 
     const ONESIGNAL_REST_KEY = "os_v2_app_32fshhubybavllzooqqj4pouibz7lmqho27ewc47rjwhjloy5fjbb74k4lkbwzwzkgo3sqz7o5htun4i3dxa3zbovbrmy4ed7apl2ui";
-
     const MY_NUM = "hadi";      
     const FRIEND_NUM = "abdullah"; 
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let currentUser = "";
+    let typingTimeout;
 
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(function(OneSignal) {
@@ -100,19 +95,30 @@
             document.getElementById("user-display").innerText = val;
             if (val === MY_NUM) document.getElementById("admin-reset").style.display = "block";
             startListening();
+            listenForTyping();
         } else {
             document.getElementById("error").style.display = "block";
         }
     };
 
+    async function setTypingStatus(isTyping) {
+        await setDoc(doc(db, "status", currentUser), { typing: isTyping });
+    }
+
+    function listenForTyping() {
+        const otherUser = currentUser === MY_NUM ? FRIEND_NUM : MY_NUM;
+        onSnapshot(doc(db, "status", otherUser), (doc) => {
+            const data = doc.data();
+            const indicator = document.getElementById("typing-indicator");
+            indicator.innerText = (data && data.typing) ? `${otherUser} is typing...` : "";
+        });
+    }
+
     async function triggerNotification(text) {
         try {
             await fetch("https://onesignal.com/api/v1/notifications", {
                 method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": `Basic ${ONESIGNAL_REST_KEY}` 
-                },
+                headers: { "Content-Type": "application/json", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
                 body: JSON.stringify({
                     app_id: ONESIGNAL_ID,
                     included_segments: ["All"],
@@ -120,7 +126,7 @@
                     headings: { "en": "Private Chat" }
                 })
             });
-        } catch (error) { console.error("Notification Error:", error); }
+        } catch (error) { console.error(error); }
     }
 
     window.sendText = async () => {
@@ -128,17 +134,14 @@
         if (!input.value.trim()) return;
         const msg = input.value;
         input.value = ""; 
-
+        setTypingStatus(false);
         await addDoc(collection(db, "chats"), {
             sender: currentUser,
             message: msg,
             type: "text",
             time: serverTimestamp()
         });
-
-        if (currentUser === FRIEND_NUM) {
-            triggerNotification("New message from Abdullah!");
-        }
+        triggerNotification(`New message from ${currentUser}`);
     };
 
     window.uploadMedia = () => {
@@ -148,11 +151,9 @@
         const fill = document.getElementById("progress-fill");
         const percentText = document.getElementById("percent");
         container.style.display = "block";
-
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", UPLOAD_PRESET);
-
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, true);
         xhr.upload.onprogress = (e) => {
@@ -169,7 +170,7 @@
                 time: serverTimestamp()
             });
             container.style.display = "none";
-            if (currentUser === FRIEND_NUM) triggerNotification("Abdullah sent media!");
+            triggerNotification(`${currentUser} sent media`);
         };
         xhr.send(formData);
     };
@@ -200,6 +201,13 @@
             box.scrollTop = box.scrollHeight;
         });
     }
+
+    document.getElementById("text-in").addEventListener("input", () => {
+        setTypingStatus(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => setTypingStatus(false), 2000);
+    });
+
     document.getElementById("text-in").addEventListener("keypress", (e) => { if(e.key === "Enter") window.sendText(); });
 </script>
 </body>
