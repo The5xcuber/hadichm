@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Private Chat</title>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.SDK.sw.js" defer></script>
     <style>
         :root { --bg: #0b141a; --header: #202c33; --my-msg: #005c4b; --friend-msg: #202c33; --text: #e9edef; }
         body { font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); margin: 0; display: flex; justify-content: center; height: 100dvh; overflow: hidden; }
@@ -75,20 +74,14 @@
         appId: "1:874432806654:web:cfd8fb88a25091e8722faf"
     };
 
+    const PUSHBULLET_TOKEN = "o.ZAR26mtfXaWkvMQhuKbYjVN3GL3bFauZ";
     const CLOUD_NAME = "dhaydp4rq";
     const UPLOAD_PRESET = "ml_default"; 
-    const ONESIGNAL_ID = "de8b239e-81c0-4155-af2e-74209e3dd440"; 
-    const ONESIGNAL_REST_KEY = "os_v2_app_32fshhubybavllzooqqj4pouibz7lmqho27ewc47rjwhjloy5fjbb74k4lkbwzwzkgo3sqz7o5htun4i3dxa3zbovbrmy4ed7apl2ui";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let currentUser = "";
     let typingTimeout;
-
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(function(OneSignal) {
-        OneSignal.init({ appId: ONESIGNAL_ID });
-    });
 
     window.login = () => {
         const val = document.getElementById("phoneBox").value.trim().toLowerCase();
@@ -98,11 +91,6 @@
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
-
-            OneSignalDeferred.push(function(OneSignal) {
-                OneSignal.Notifications.requestPermission();
-            });
-
             startListening();
             listenForTyping();
         } else {
@@ -110,19 +98,12 @@
         }
     };
 
-    async function triggerNotification(text) {
-        try {
-            await fetch("https://onesignal.com/api/v1/notifications", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
-                body: JSON.stringify({
-                    app_id: ONESIGNAL_ID,
-                    included_segments: ["All"],
-                    contents: { "en": text },
-                    headings: { "en": "Private Chat" }
-                })
-            });
-        } catch (e) { console.error(e); }
+    async function sendPush(msg) {
+        fetch('https://api.pushbullet.com/v2/pushes', {
+            method: 'POST',
+            headers: { 'Access-Token': PUSHBULLET_TOKEN, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'note', title: 'Private Chat', body: msg })
+        });
     }
 
     async function setTypingStatus(isTyping) {
@@ -149,7 +130,7 @@
             type: "text",
             time: serverTimestamp()
         });
-        triggerNotification(`New message from ${currentUser}`);
+        sendPush(`${currentUser}: ${msg}`);
     };
 
     window.uploadMedia = () => {
@@ -180,7 +161,7 @@
                 time: serverTimestamp()
             });
             container.style.display = "none";
-            triggerNotification(`${currentUser} sent media!`);
+            sendPush(`${currentUser} sent media!`);
         };
         xhr.send(formData);
     };
