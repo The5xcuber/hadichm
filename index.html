@@ -2,30 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Private Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Chat - Laptop Edition</title>
     <style>
         :root { --bg: #0b141a; --header: #202c33; --my-msg: #005c4b; --friend-msg: #202c33; --text: #e9edef; }
-        body { font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); margin: 0; display: flex; justify-content: center; height: 100dvh; overflow: hidden; }
-        #app { width: 100%; max-width: 500px; background: var(--bg); display: flex; flex-direction: column; height: 100dvh; }
-        #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        input[type="text"] { padding: 12px; width: 85%; border: none; border-radius: 8px; background: #2a3942; color: white; margin: 10px 0; font-size: 16px; outline: none; }
-        .btn { padding: 12px 30px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; border:none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); margin: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        #app { width: 100%; max-width: 600px; background: var(--bg); display: flex; flex-direction: column; height: 100vh; border-left: 1px solid #333; border-right: 1px solid #333; }
+        #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        input[type="text"] { padding: 12px; width: 80%; border: none; border-radius: 8px; background: #2a3942; color: white; margin: 10px 0; outline: none; }
+        .btn { padding: 12px 30px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
         #chat-screen { display: none; flex-direction: column; height: 100%; }
-        header { background: var(--header); padding: 15px; font-weight: bold; border-bottom: 1px solid #374045; }
+        header { background: var(--header); padding: 15px; border-bottom: 1px solid #374045; }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
-        #typing-indicator { font-size: 12px; color: #00a884; height: 15px; font-weight: normal; margin-top: 5px; }
-        #msg-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
-        .bubble { padding: 8px 12px; border-radius: 10px; max-width: 75%; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.2); word-wrap: break-word; }
-        .sent { align-self: flex-end; background: var(--my-msg); border-top-right-radius: 0; }
-        .received { align-self: flex-start; background: var(--friend-msg); border-top-left-radius: 0; }
-        .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
-        #upload-container { display: none; background: #202c33; padding: 10px; border-bottom: 1px solid #00a884; }
-        .progress-bg { width: 100%; height: 6px; background: #2a3942; border-radius: 10px; overflow: hidden; margin-top: 5px; }
-        #progress-fill { width: 0%; height: 100%; background: #00a884; transition: width 0.3s ease; }
-        #input-area { background: var(--header); padding: 10px; display: flex; align-items: center; gap: 10px; }
-        #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 20px; color: white; outline: none; }
-        #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 10px; font-size: 10px; padding: 5px 10px; cursor: pointer; }
+        #typing-indicator { font-size: 12px; color: #00a884; height: 15px; margin-top: 5px; }
+        #msg-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
+        .bubble { padding: 10px 15px; border-radius: 12px; max-width: 70%; font-size: 14px; position: relative; }
+        .sent { align-self: flex-end; background: var(--my-msg); }
+        .received { align-self: flex-start; background: var(--friend-msg); }
+        .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        #input-area { background: var(--header); padding: 15px; display: flex; align-items: center; gap: 10px; }
+        #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 25px; color: white; outline: none; }
+        #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -33,29 +30,22 @@
 <div id="app">
     <div id="auth-screen">
         <h2 style="color: #00a884;">Private Chat</h2>
-        <input type="text" id="phoneBox" placeholder="Enter code word...">
+        <input type="text" id="phoneBox" placeholder="Code word...">
         <button class="btn" onclick="login()">Login</button>
-        <p id="error" style="color:#ff5e5e; display:none; margin-top:10px;">Unauthorized</p>
     </div>
 
     <div id="chat-screen">
         <header>
             <div class="header-top">
                 <span>Chatting: <span id="user-display" style="color:#00a884;"></span></span>
-                <button id="admin-reset" onclick="masterReset()">RESET CHAT</button>
+                <button id="admin-reset" onclick="masterReset()">RESET SERVER DATA</button>
             </div>
             <div id="typing-indicator"></div>
         </header>
-        <div id="upload-container">
-            <div style="font-size:11px;">Uploading: <span id="percent">0%</span></div>
-            <div class="progress-bg"><div id="progress-fill"></div></div>
-        </div>
         <div id="msg-box"></div>
         <div id="input-area">
-            <label style="cursor:pointer; font-size:24px;">📎
-                <input type="file" id="file-btn" hidden onchange="uploadMedia()">
-            </label>
-            <input type="text" id="text-in" placeholder="Type a message">
+            <label style="cursor:pointer; font-size:24px;">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
+            <input type="text" id="text-in" placeholder="Type a message...">
             <button class="btn" onclick="sendText()">➤</button>
         </div>
     </div>
@@ -80,12 +70,12 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let currentUser = "";
-    let typingTimeout;
+    let isInitialLoad = true;
     const msgTone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-    // Register Background Script
+    // REGISTRATION OF GHOST SCRIPT
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log("Ghost Script Active"));
+        navigator.serviceWorker.register('sw.js');
     }
 
     window.login = () => {
@@ -96,74 +86,36 @@
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
-            if ("Notification" in window) Notification.requestPermission();
+            
+            Notification.requestPermission();
             startListening();
-            listenForTyping();
-        } else {
-            document.getElementById("error").style.display = "block";
         }
     };
-
-    async function setTypingStatus(isTyping) {
-        await setDoc(doc(db, "status", currentUser), { typing: isTyping });
-    }
-
-    function listenForTyping() {
-        const otherUser = currentUser === "hadi" ? "abdullah" : "hadi";
-        onSnapshot(doc(db, "status", otherUser), (snap) => {
-            const indicator = document.getElementById("typing-indicator");
-            indicator.innerText = (snap.data()?.typing) ? `${otherUser} is typing...` : "";
-        });
-    }
 
     window.sendText = async () => {
         const input = document.getElementById("text-in");
         if (!input.value.trim()) return;
         const msg = input.value;
         input.value = "";
-        setTypingStatus(false);
-        await addDoc(collection(db, "chats"), {
-            sender: currentUser,
-            message: msg,
-            type: "text",
-            time: serverTimestamp()
-        });
+        await addDoc(collection(db, "chats"), { sender: currentUser, message: msg, type: "text", time: serverTimestamp() });
     };
 
     window.uploadMedia = () => {
         const file = document.getElementById("file-btn").files[0];
         if (!file) return;
-        const container = document.getElementById("upload-container");
-        const fill = document.getElementById("progress-fill");
-        const percentText = document.getElementById("percent");
-        container.style.display = "block";
-
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", UPLOAD_PRESET);
 
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, true);
-        xhr.upload.onprogress = (e) => {
-            const p = Math.round((e.loaded / e.total) * 100);
-            fill.style.width = p + "%";
-            percentText.innerText = p + "%";
-        };
-        xhr.onload = async () => {
-            const data = JSON.parse(xhr.responseText);
-            await addDoc(collection(db, "chats"), {
-                sender: currentUser,
-                url: data.secure_url,
-                type: data.resource_type,
-                time: serverTimestamp()
-            });
-            container.style.display = "none";
-        };
-        xhr.send(formData);
+        fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(async data => {
+            await addDoc(collection(db, "chats"), { sender: currentUser, url: data.secure_url, type: data.resource_type, time: serverTimestamp() });
+        });
     };
 
     window.masterReset = async () => {
-        if (!confirm("Wipe all messages?")) return;
+        if (!confirm("WIPE ALL DATA FROM FIREBASE PERMANENTLY?")) return;
         const q = query(collection(db, "chats"));
         const snap = await getDocs(q);
         const batch = writeBatch(db);
@@ -177,20 +129,13 @@
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
             
-            snap.docChanges().forEach((change) => {
+            snap.docChanges().forEach(change => {
                 if (change.type === "added") {
                     const d = change.doc.data();
-                    if (d.sender !== currentUser && d.time !== null) {
-                        const now = Date.now();
-                        const msgTime = d.time.toMillis();
-                        if (now - msgTime < 10000) {
-                            msgTone.play().catch(() => {});
-                            if (Notification.permission === "granted") {
-                                new Notification(`From ${d.sender}`, {
-                                    body: d.message || "Sent media",
-                                    icon: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
-                                });
-                            }
+                    if (d.sender !== currentUser && !isInitialLoad) {
+                        msgTone.play().catch(() => {});
+                        if (Notification.permission === "granted") {
+                            new Notification(`Message from ${d.sender}`, { body: d.message || "Sent media" });
                         }
                     }
                 }
@@ -205,15 +150,10 @@
                 if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
                 box.appendChild(div);
             });
+            isInitialLoad = false;
             box.scrollTop = box.scrollHeight;
         });
     }
-
-    document.getElementById("text-in").addEventListener("input", () => {
-        setTypingStatus(true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => setTypingStatus(false), 2000);
-    });
 
     document.getElementById("text-in").addEventListener("keypress", (e) => { if(e.key === "Enter") window.sendText(); });
 </script>
