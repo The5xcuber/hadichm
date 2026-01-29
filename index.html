@@ -24,13 +24,14 @@
         #progress-fill { width: 0%; height: 100%; background: #00a884; transition: width 0.2s; }
         
         #msg-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
-        .bubble { padding: 10px 15px; border-radius: 12px; max-width: 80%; font-size: 14px; position: relative; word-wrap: break-word; }
+        .bubble { padding: 10px 15px; border-radius: 12px; max-width: 85%; font-size: 14px; position: relative; word-wrap: break-word; }
         .sent { align-self: flex-end; background: var(--my-msg); }
         .received { align-self: flex-start; background: var(--friend-msg); }
         .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
         #input-area { background: var(--header); padding: 15px; display: flex; align-items: center; gap: 10px; }
         #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 25px; color: white; outline: none; }
         #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+        a { color: #34b7f1; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -52,7 +53,7 @@
         </header>
         
         <div id="upload-container">
-            <div style="font-size:12px; margin-bottom:4px;">Uploading to Cloud: <span id="percent">0%</span></div>
+            <div style="font-size:12px; margin-bottom:4px;">Uploading: <span id="percent">0%</span></div>
             <div class="progress-bg"><div id="progress-fill"></div></div>
         </div>
 
@@ -67,7 +68,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, setDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCaXxH4g_RJUazSlkimpHHOKFohn2MVMM8",
@@ -87,11 +88,7 @@
     let isInitialLoad = true;
     const msgTone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(e => console.log("SW failed"));
-    }
-
-    // LOGIN FUNCTION (Keep original logic)
+    // FIXED LOGIN
     window.login = () => {
         const val = document.getElementById("phoneBox").value.trim().toLowerCase();
         if (val === "hadi" || val === "abdullah") {
@@ -100,7 +97,7 @@
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
-            Notification.requestPermission();
+            if (Notification.permission !== "granted") Notification.requestPermission();
             startListening();
         } else {
             alert("Wrong code word!");
@@ -157,63 +154,41 @@
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
             
+            snap.docChanges().forEach(change => {
+                if (change.type === "added" && !isInitialLoad) {
+                    const d = change.doc.data();
+                    if (d.sender !== currentUser) {
+                        msgTone.play().catch(() => {});
+                        if (Notification.permission === "granted") {
+                            new Notification(`From ${d.sender}`, { body: d.message || "Sent media" });
+                        }
+                    }
+                }
+            });
+
             snap.forEach(docSnap => {
                 const d = docSnap.data();
                 const div = document.createElement("div");
                 div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
                 
                 if (d.type === "text") {
-                    // 1. REGEX FOR ALL LINKS
                     const urlRegex = /(https?:\/\/[^\s]+)/g;
-                    
-                    // 2. CHECK FOR YOUTUBE SPECIFICALLY
                     const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
                     const ytMatch = d.message.match(ytRegex);
 
                     if (ytMatch) {
                         const videoId = ytMatch[1];
-                        div.innerHTML = `
-                            <div style="margin-bottom:8px;">${d.message.replace(urlRegex, (url) => `<a href="${url}" target="_blank" style="color:#34b7f1;">${url}</a>`)}</div>
-                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none;" 
+                        div.innerHTML = `<div>${d.message.replace(urlRegex, (url) => `<a href="${url}" target="_blank">${url}</a>`)}</div>
+                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none; margin-top:10px;" 
                                 src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
                     } else {
-                        // 3. CONVERT REGULAR LINKS TO CLICKABLE LINKS
-                        const linkedText = d.message.replace(urlRegex, (url) => {
-                            return `<a href="${url}" target="_blank" style="color:#34b7f1; text-decoration: underline;">${url}</a>`;
-                        });
-                        div.innerHTML = linkedText;
+                        div.innerHTML = d.message.replace(urlRegex, (url) => `<a href="${url}" target="_blank">${url}</a>`);
                     }
+                } else if (d.type === "image") {
+                    div.innerHTML = `<img src="${d.url}">`;
+                } else if (d.type === "video") {
+                    div.innerHTML = `<video src="${d.url}" controls></video>`;
                 }
-                
-                if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
-                if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
-                
-                box.appendChild(div);
-            });
-            isInitialLoad = false;
-            box.scrollTop = box.scrollHeight;
-        });
-    }
-
-            snap.forEach(docSnap => {
-                const d = docSnap.data();
-                const div = document.createElement("div");
-                div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
-                
-                if (d.type === "text") {
-                    // YOUTUBE EMBED LOGIC
-                    const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-                    const match = d.message.match(ytRegex);
-
-                    if (match) {
-                        const videoId = match[1];
-                        div.innerHTML = `${d.message}<br><iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; margin-top:10px; border:none;" src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
-                    } else {
-                        div.innerText = d.message;
-                    }
-                }
-                if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
-                if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
                 box.appendChild(div);
             });
             isInitialLoad = false;
