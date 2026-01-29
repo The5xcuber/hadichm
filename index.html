@@ -157,17 +157,43 @@
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
             
-            snap.docChanges().forEach(change => {
-                if (change.type === "added") {
-                    const d = change.doc.data();
-                    if (d.sender !== currentUser && !isInitialLoad) {
-                        msgTone.play().catch(() => {});
-                        if (Notification.permission === "granted") {
-                            new Notification(`Message from ${d.sender}`, { body: d.message || "Sent media" });
-                        }
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
+                const div = document.createElement("div");
+                div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
+                
+                if (d.type === "text") {
+                    // 1. REGEX FOR ALL LINKS
+                    const urlRegex = /(https?:\/\/[^\s]+)/g;
+                    
+                    // 2. CHECK FOR YOUTUBE SPECIFICALLY
+                    const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                    const ytMatch = d.message.match(ytRegex);
+
+                    if (ytMatch) {
+                        const videoId = ytMatch[1];
+                        div.innerHTML = `
+                            <div style="margin-bottom:8px;">${d.message.replace(urlRegex, (url) => `<a href="${url}" target="_blank" style="color:#34b7f1;">${url}</a>`)}</div>
+                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none;" 
+                                src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+                    } else {
+                        // 3. CONVERT REGULAR LINKS TO CLICKABLE LINKS
+                        const linkedText = d.message.replace(urlRegex, (url) => {
+                            return `<a href="${url}" target="_blank" style="color:#34b7f1; text-decoration: underline;">${url}</a>`;
+                        });
+                        div.innerHTML = linkedText;
                     }
                 }
+                
+                if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
+                if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
+                
+                box.appendChild(div);
             });
+            isInitialLoad = false;
+            box.scrollTop = box.scrollHeight;
+        });
+    }
 
             snap.forEach(docSnap => {
                 const d = docSnap.data();
