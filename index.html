@@ -88,10 +88,9 @@
     let isInitialLoad = true;
     const msgTone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-    // --- UPDATED LOGIN (Now checks for "Abdullah") ---
+    // --- LOGIN (Fixed Alert) ---
     window.login = () => {
         const val = document.getElementById("phoneBox").value.trim();
-        // Checks for 'hadi' or 'Abdullah' exactly
         if (val === "hadi" || val === "Abdullah") {
             currentUser = val;
             document.getElementById("auth-screen").style.display = "none";
@@ -100,7 +99,7 @@
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
             startListening();
         } else {
-            alert("Wrong code word! Remember: Abdullah needs a capital A.");
+            alert("Wrong code word!");
         }
     };
 
