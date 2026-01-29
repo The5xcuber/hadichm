@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Chat & Call</title>
+    <title>Private Chat With Chaudry</title>
     
     <link rel="icon" type="image/x-icon" href="favicon.ico?v=1">
-
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <style>
         :root { --bg: #0b141a; --header: #202c33; --my-msg: #005c4b; --friend-msg: #202c33; --text: #e9edef; }
@@ -21,9 +19,6 @@
         header { background: var(--header); padding: 15px; border-bottom: 1px solid #374045; }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
         
-        /* CALL UI BAR */
-        #call-bar { display: none; background: #00a884; color: white; padding: 10px; text-align: center; font-weight: bold; justify-content: space-around; align-items: center; }
-        
         #msg-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
         .bubble { padding: 10px 15px; border-radius: 12px; max-width: 85%; font-size: 14px; position: relative; word-wrap: break-word; }
         .sent { align-self: flex-end; background: var(--my-msg); }
@@ -33,8 +28,9 @@
         #input-area { background: var(--header); padding: 15px; display: flex; align-items: center; gap: 10px; }
         #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 25px; color: white; outline: none; }
         .btn { padding: 10px 20px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        .call-btn { background: transparent; border: 1px solid #00a884; font-size: 18px; }
-        .hangup-btn { background: #ea0038; border-radius: 5px; padding: 5px 10px; }
+        #upload-container { display: none; background: #202c33; padding: 10px; border-bottom: 2px solid #00a884; }
+        .progress-bg { width: 100%; height: 8px; background: #2a3942; border-radius: 10px; overflow: hidden; margin-top: 5px; }
+        #progress-fill { width: 0%; height: 100%; background: #00a884; transition: width 0.2s; }
         a { color: #34b7f1; text-decoration: underline; }
     </style>
 </head>
@@ -42,7 +38,7 @@
 
 <div id="app">
     <div id="auth-screen">
-        <h2 style="color: #00a884;">Private Chat & Call</h2>
+        <h2 style="color: #00a884;">Private Chat</h2>
         <input type="text" id="phoneBox" placeholder="Code word...">
         <button class="btn" onclick="login()">Login</button>
     </div>
@@ -51,21 +47,13 @@
         <header>
             <div class="header-top">
                 <span>Chatting: <span id="user-display" style="color:#00a884;"></span></span>
-                <div>
-                    <button class="btn call-btn" onclick="startVoiceCall()">📞 Call</button>
-                    <button id="admin-reset" style="display:none; background:#ff3b30; color:white; border:none; padding:5px; font-size:10px;" onclick="masterReset()">RESET</button>
-                </div>
+                <button id="admin-reset" style="display:none; background:#ff3b30; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;" onclick="masterReset()">RESET SERVER</button>
             </div>
         </header>
-
-        <div id="call-bar">
-            <span id="call-status">Ready</span>
-            <button class="btn hangup-btn" onclick="endCall()">End Call</button>
-        </div>
         
-        <div id="upload-container" style="display:none; background:#202c33; padding:10px;">
-            <div style="font-size:12px;">Uploading Media: <span id="percent">0%</span></div>
-            <div style="width:100%; height:4px; background:#2a3942;"><div id="progress-fill" style="width:0%; height:100%; background:#00a884;"></div></div>
+        <div id="upload-container">
+            <div style="font-size:12px; margin-bottom:4px;">Uploading: <span id="percent">0%</span></div>
+            <div class="progress-bg"><div id="progress-fill"></div></div>
         </div>
 
         <div id="msg-box"></div>
@@ -77,8 +65,6 @@
         </div>
     </div>
 </div>
-
-<audio id="remoteAudio" autoplay></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -100,72 +86,24 @@
     const db = getFirestore(app);
     let currentUser = "";
     let isInitialLoad = true;
-    let myPeer;
-    let currentCall;
+    const msgTone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
-    // --- LOGIN & CALL SYSTEM ---
+    // --- UPDATED LOGIN (Now checks for "Abdullah") ---
     window.login = () => {
-        const val = document.getElementById("phoneBox").value.trim().toLowerCase();
-        if (val === "hadi" || val === "abdullah") {
+        const val = document.getElementById("phoneBox").value.trim();
+        // Checks for 'hadi' or 'Abdullah' exactly
+        if (val === "hadi" || val === "Abdullah") {
             currentUser = val;
             document.getElementById("auth-screen").style.display = "none";
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
-            if (val === "hadi") document.getElementById("admin-reset").style.display = "inline";
-            
-            setupPeer(val);
+            if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
             startListening();
         } else {
-            alert("Wrong code word!");
+            alert("Wrong code word! Remember: Abdullah needs a capital A.");
         }
     };
 
-    function setupPeer(userId) {
-        myPeer = new Peer(userId, {
-            config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] }
-        });
-
-        myPeer.on('call', (incomingCall) => {
-            if(confirm("Incoming Voice Call from Friend?")) {
-                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                    incomingCall.answer(stream);
-                    handleCall(incomingCall);
-                });
-            }
-        });
-    }
-
-    window.startVoiceCall = () => {
-        const friend = currentUser === "hadi" ? "abdullah" : "hadi";
-        document.getElementById("call-bar").style.display = "flex";
-        document.getElementById("call-status").innerText = "Dialing " + friend + "...";
-
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            const call = myPeer.call(friend, stream);
-            handleCall(call);
-        }).catch(err => alert("Please allow Microphone access in your browser settings!"));
-    };
-
-    function handleCall(call) {
-        currentCall = call;
-        document.getElementById("call-bar").style.display = "flex";
-        document.getElementById("call-status").innerText = "In Call";
-
-        call.on('stream', (remoteStream) => {
-            document.getElementById('remoteAudio').srcObject = remoteStream;
-        });
-        call.on('close', () => {
-            document.getElementById("call-bar").style.display = "none";
-        });
-    }
-
-    window.endCall = () => {
-        if(currentCall) currentCall.close();
-        document.getElementById("call-bar").style.display = "none";
-        location.reload(); 
-    };
-
-    // --- CHAT & MEDIA FUNCTIONS ---
     window.sendText = async () => {
         const input = document.getElementById("text-in");
         if (!input.value.trim()) return;
@@ -177,25 +115,35 @@
     window.uploadMedia = () => {
         const file = document.getElementById("file-btn").files[0];
         if (!file) return;
+
+        const container = document.getElementById("upload-container");
+        const fill = document.getElementById("progress-fill");
+        container.style.display = "block";
+
         const resourceType = file.type.startsWith('video') ? 'video' : 'image';
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", UPLOAD_PRESET);
-        
-        document.getElementById("upload-container").style.display = "block";
+
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`, true);
+
         xhr.upload.onprogress = (e) => {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            document.getElementById("progress-fill").style.width = percent + "%";
-            document.getElementById("percent").innerText = percent + "%";
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                fill.style.width = percent + "%";
+                document.getElementById("percent").innerText = percent + "%";
+            }
         };
+
         xhr.onload = async () => {
             const data = JSON.parse(xhr.responseText);
             let finalUrl = data.secure_url;
-            if (resourceType === 'video') finalUrl = data.secure_url.replace(/\.[^/.]+$/, ".mp4");
+            if (resourceType === 'video') {
+                finalUrl = data.secure_url.replace(/\.[^/.]+$/, ".mp4");
+            }
             await addDoc(collection(db, "chats"), { sender: currentUser, url: finalUrl, type: resourceType, time: serverTimestamp() });
-            document.getElementById("upload-container").style.display = "none";
+            container.style.display = "none";
         };
         xhr.send(formData);
     };
@@ -205,6 +153,7 @@
         onSnapshot(q, (snap) => {
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
+            
             snap.forEach(docSnap => {
                 const d = docSnap.data();
                 const div = document.createElement("div");
@@ -214,6 +163,7 @@
                     const urlRegex = /(https?:\/\/[^\s]+)/g;
                     const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
                     const ytMatch = d.message.match(ytRegex);
+
                     if (ytMatch) {
                         div.innerHTML = `<div>${d.message.replace(urlRegex, u => `<a href="${u}" target="_blank">${u}</a>`)}</div>
                             <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none; margin-top:10px;" src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
@@ -232,7 +182,7 @@
     }
 
     window.masterReset = async () => {
-        if (!confirm("WIPE ALL?")) return;
+        if (!confirm("WIPE ALL DATA?")) return;
         const snap = await getDocs(query(collection(db, "chats")));
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
