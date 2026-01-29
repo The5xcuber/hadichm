@@ -1,19 +1,16 @@
-// Background Listener
-self.addEventListener('push', function(event) {
-    const data = event.data ? event.data.text() : 'New Message Received';
-    
-    event.waitUntil(
-        self.registration.showNotification('Private Chat', {
-            body: data,
-            icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-            badge: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-            vibrate: [200, 100, 200],
-            tag: 'chat-notif',
-            renotify: true
-        })
-    );
+// This is the Service Worker (Ghost Script)
+self.addEventListener('install', (e) => {
+    self.skipWaiting();
 });
 
-// Force the worker to activate immediately
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', () => self.clients.claim());
+self.addEventListener('activate', (e) => {
+    console.log("Ghost Script is now haunting your laptop background.");
+});
+
+// This listens for data even when the tab is closed
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow('/') // Opens your chat when you click the notification
+    );
+});
