@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Private Chat</title>
+    
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.SDK.sw.js" defer></script>
+
     <style>
         :root { --bg: #0b141a; --header: #202c33; --my-msg: #005c4b; --friend-msg: #202c33; --text: #e9edef; }
         body { font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); margin: 0; display: flex; justify-content: center; height: 100dvh; overflow: hidden; }
@@ -14,7 +17,7 @@
         .btn { padding: 12px 30px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
 
         #chat-screen { display: none; flex-direction: column; height: 100%; }
-        header { background: var(--header); padding: 15px; font-weight: bold; border-bottom: 1px solid #374045; }
+        header { background: var(--header); padding: 15px; font-weight: bold; border-bottom: 1px solid #374045; display: flex; justify-content: space-between; align-items: center; }
         #msg-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
         
         .bubble { padding: 8px 12px; border-radius: 10px; max-width: 75%; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.2); word-wrap: break-word; }
@@ -22,15 +25,13 @@
         .received { align-self: flex-start; background: var(--friend-msg); border-top-left-radius: 0; }
         .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
 
-        #input-area { background: var(--header); padding: 10px; display: flex; align-items: center; gap: 10px; }
-        #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 20px; color: white; outline: none; }
-        
-        /* Progress Bar Styling */
         #upload-container { display: none; background: #202c33; padding: 10px; border-bottom: 1px solid #00a884; }
         .progress-bg { width: 100%; height: 6px; background: #2a3942; border-radius: 10px; overflow: hidden; margin-top: 5px; }
         #progress-fill { width: 0%; height: 100%; background: #00a884; transition: width 0.3s ease; }
         
-        #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 12px; font-size: 10px; padding: 5px 10px; float: right; cursor: pointer; font-weight: bold; }
+        #input-area { background: var(--header); padding: 10px; display: flex; align-items: center; gap: 10px; }
+        #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 20px; color: white; outline: none; }
+        #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 10px; font-size: 10px; padding: 5px 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -38,23 +39,20 @@
 <div id="app">
     <div id="auth-screen">
         <h2 style="color: #00a884;">Private Chat</h2>
-        <p style="opacity: 0.7;">Enter your secret code word</p>
-        <input type="text" id="phoneBox" placeholder="Code word here...">
+        <input type="text" id="phoneBox" placeholder="Enter code word...">
         <button class="btn" onclick="login()">Login</button>
-        <p id="error" style="color:#ff5e5e; display:none; margin-top:10px;">Access Denied!</p>
+        <p id="error" style="color:#ff5e5e; display:none; margin-top:10px;">Unauthorized</p>
     </div>
 
     <div id="chat-screen">
         <header>
-            Chatting as: <span id="user-display" style="color:#00a884;"></span>
+            <div>Chatting: <span id="user-display" style="color:#00a884;"></span></div>
             <button id="admin-reset" onclick="masterReset()">RESET CHAT</button>
         </header>
 
         <div id="upload-container">
-            <div style="font-size:12px; margin-bottom:5px;">Uploading... <span id="percent">0%</span></div>
-            <div class="progress-bg">
-                <div id="progress-fill"></div>
-            </div>
+            <div style="font-size:11px;">Uploading: <span id="percent">0%</span></div>
+            <div class="progress-bg"><div id="progress-fill"></div></div>
         </div>
 
         <div id="msg-box"></div>
@@ -85,6 +83,11 @@
 
     const CLOUD_NAME = "dhaydp4rq";
     const UPLOAD_PRESET = "ml_default"; 
+    
+    // !!! REPLACE THESE WITH YOUR ONESIGNAL KEYS !!!
+// Paste your key here!
+    const ONESIGNAL_ID = "de8b239e-81c0-4155-af2e-74209e3dd440"; 
+    const ONESIGNAL_REST_KEY = "os_v2_app_32fshhubybavllzooqqj4pouiarodpsd6oheumura34fa4gzgktg35w5d2hp637bjmcg3u2mjwjblfegisjqbmrlnjwejwxi45oa67y";
 
     const MY_NUM = "hadi";      
     const FRIEND_NUM = "abdullah"; 
@@ -93,19 +96,20 @@
     const db = getFirestore(app);
     let currentUser = "";
 
+    // OneSignal Init
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(function(OneSignal) {
+        OneSignal.init({ appId: ONESIGNAL_ID });
+    });
+
     window.login = () => {
-        const val = document.getElementById("phoneBox").value.trim();
+        const val = document.getElementById("phoneBox").value.trim().toLowerCase();
         if (val === MY_NUM || val === FRIEND_NUM) {
             currentUser = val;
             document.getElementById("auth-screen").style.display = "none";
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
-            
-            // Show Reset Button ONLY for you
-            if (val === MY_NUM) {
-                document.getElementById("admin-reset").style.display = "block";
-            }
-            
+            if (val === MY_NUM) document.getElementById("admin-reset").style.display = "block";
             startListening();
         } else {
             document.getElementById("error").style.display = "block";
@@ -117,26 +121,35 @@
         if (!input.value.trim()) return;
         const msg = input.value;
         input.value = ""; 
+
         await addDoc(collection(db, "chats"), {
             sender: currentUser,
             message: msg,
             type: "text",
             time: serverTimestamp()
         });
+
+        // NOTIFICATION LOGIC: Trigger ONLY if Abdullah is the one sending
+        if (currentUser === FRIEND_NUM) {
+            fetch("https://onesignal.com/api/v1/notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
+                body: JSON.stringify({
+                    app_id: ONESIGNAL_ID,
+                    included_segments: ["All"], // This targets you (the other subscriber)
+                    contents: { "en": "New message from Abdullah!" },
+                    headings: { "en": "Private Chat" }
+                })
+            });
+        }
     };
 
-    document.getElementById("text-in").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") window.sendText();
-    });
-
-    window.uploadMedia = async () => {
+    window.uploadMedia = () => {
         const file = document.getElementById("file-btn").files[0];
         if (!file) return;
-
         const container = document.getElementById("upload-container");
         const fill = document.getElementById("progress-fill");
         const percentText = document.getElementById("percent");
-        
         container.style.display = "block";
 
         const formData = new FormData();
@@ -145,15 +158,11 @@
 
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, true);
-
         xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const progress = Math.round((e.loaded / e.total) * 100);
-                fill.style.width = progress + "%";
-                percentText.innerText = progress + "%";
-            }
+            const p = Math.round((e.loaded / e.total) * 100);
+            fill.style.width = p + "%";
+            percentText.innerText = p + "%";
         };
-
         xhr.onload = async () => {
             const data = JSON.parse(xhr.responseText);
             await addDoc(collection(db, "chats"), {
@@ -163,35 +172,31 @@
                 time: serverTimestamp()
             });
             container.style.display = "none";
-            fill.style.width = "0%";
+            
+            // Trigger Notification for Media too
+            if (currentUser === FRIEND_NUM) {
+                fetch("https://onesignal.com/api/v1/notifications", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Basic ${ONESIGNAL_REST_KEY}` },
+                    body: JSON.stringify({
+                        app_id: ONESIGNAL_ID,
+                        included_segments: ["All"],
+                        contents: { "en": "Abdullah sent a photo/video!" }
+                    })
+                });
+            }
         };
-
-        xhr.onerror = () => {
-            alert("Upload failed. Check Cloudinary settings.");
-            container.style.display = "none";
-        };
-
         xhr.send(formData);
     };
 
     window.masterReset = async () => {
-        if (!confirm("Delete all messages and media? This cannot be undone.")) return;
-        
-        try {
-            const q = query(collection(db, "chats"));
-            const snapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            
-            snapshot.forEach((doc) => {
-                batch.delete(doc.ref);
-            });
-            
-            await batch.commit();
-            alert("Chat Wiped!");
-        } catch (err) {
-            console.error("Reset failed: ", err);
-            alert("Error wiping chat. Check Firestore Rules.");
-        }
+        if (!confirm("Wipe all data?")) return;
+        const q = query(collection(db, "chats"));
+        const snap = await getDocs(q);
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        alert("Wiped.");
     };
 
     function startListening() {
@@ -203,16 +208,16 @@
                 const d = doc.data();
                 const div = document.createElement("div");
                 div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
-                
-                if (d.type === "image") div.innerHTML += `<img src="${d.url}">`;
-                if (d.type === "video") div.innerHTML += `<video src="${d.url}" controls></video>`;
-                if (d.message) div.innerHTML += `<div>${d.message}</div>`;
-                
+                if (d.type === "text") div.innerText = d.message;
+                if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
+                if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
                 box.appendChild(div);
             });
             box.scrollTop = box.scrollHeight;
         });
     }
+
+    document.getElementById("text-in").addEventListener("keypress", (e) => { if(e.key === "Enter") window.sendText(); });
 </script>
 </body>
 </html>
