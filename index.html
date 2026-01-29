@@ -3,35 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Chat With Chaudry</title>
+    <title>Private Chat & Call</title>
     
     <link rel="icon" type="image/x-icon" href="favicon.ico?v=1">
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <style>
         :root { --bg: #0b141a; --header: #202c33; --my-msg: #005c4b; --friend-msg: #202c33; --text: #e9edef; }
         body { font-family: 'Segoe UI', sans-serif; background: #000; color: var(--text); margin: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
         #app { width: 100%; max-width: 600px; background: var(--bg); display: flex; flex-direction: column; height: 100vh; border-left: 1px solid #333; border-right: 1px solid #333; }
+        
         #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         input[type="text"] { padding: 12px; width: 80%; border: none; border-radius: 8px; background: #2a3942; color: white; margin: 10px 0; outline: none; }
-        .btn { padding: 12px 30px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        
         #chat-screen { display: none; flex-direction: column; height: 100%; }
         header { background: var(--header); padding: 15px; border-bottom: 1px solid #374045; }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
-        #typing-indicator { font-size: 12px; color: #00a884; height: 15px; margin-top: 5px; }
         
-        #upload-container { display: none; background: #202c33; padding: 10px; border-bottom: 2px solid #00a884; }
-        .progress-bg { width: 100%; height: 8px; background: #2a3942; border-radius: 10px; overflow: hidden; margin-top: 5px; }
-        #progress-fill { width: 0%; height: 100%; background: #00a884; transition: width 0.2s; }
+        /* CALL UI */
+        #call-bar { display: none; background: #00a884; color: white; padding: 10px; text-align: center; font-weight: bold; justify-content: space-around; align-items: center; }
         
         #msg-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
         .bubble { padding: 10px 15px; border-radius: 12px; max-width: 85%; font-size: 14px; position: relative; word-wrap: break-word; }
         .sent { align-self: flex-end; background: var(--my-msg); }
         .received { align-self: flex-start; background: var(--friend-msg); }
         .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        
         #input-area { background: var(--header); padding: 15px; display: flex; align-items: center; gap: 10px; }
         #text-in { flex: 1; background: #2a3942; border: none; padding: 12px; border-radius: 25px; color: white; outline: none; }
-        #admin-reset { display: none; background: #ff3b30; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
-        a { color: #34b7f1; text-decoration: underline; }
+        .btn { padding: 10px 20px; background: #00a884; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .call-btn { background: transparent; border: 1px solid #00a884; font-size: 18px; }
+        .hangup-btn { background: #ea0038; border-radius: 5px; padding: 5px 10px; }
+        a { color: #34b7f1; }
     </style>
 </head>
 <body>
@@ -47,17 +51,25 @@
         <header>
             <div class="header-top">
                 <span>Chatting: <span id="user-display" style="color:#00a884;"></span></span>
-                <button id="admin-reset" onclick="masterReset()">RESET SERVER DATA</button>
+                <div>
+                    <button class="btn call-btn" onclick="startVoiceCall()">📞 Call</button>
+                    <button id="admin-reset" style="display:none; background:#ff3b30; color:white; border:none; padding:5px; font-size:10px;" onclick="masterReset()">RESET</button>
+                </div>
             </div>
-            <div id="typing-indicator"></div>
         </header>
+
+        <div id="call-bar">
+            <span id="call-status">Calling...</span>
+            <button class="btn hangup-btn" onclick="endCall()">End</button>
+        </div>
         
-        <div id="upload-container">
-            <div style="font-size:12px; margin-bottom:4px;">Uploading: <span id="percent">0%</span></div>
-            <div class="progress-bg"><div id="progress-fill"></div></div>
+        <div id="upload-container" style="display:none; background:#202c33; padding:10px;">
+            <div style="font-size:12px;">Uploading: <span id="percent">0%</span></div>
+            <div style="width:100%; height:4px; background:#2a3942;"><div id="progress-fill" style="width:0%; height:100%; background:#00a884;"></div></div>
         </div>
 
         <div id="msg-box"></div>
+
         <div id="input-area">
             <label style="cursor:pointer; font-size:24px;">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
             <input type="text" id="text-in" placeholder="Type a message...">
@@ -65,6 +77,8 @@
         </div>
     </div>
 </div>
+
+<audio id="remoteAudio" autoplay></audio>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -86,9 +100,10 @@
     const db = getFirestore(app);
     let currentUser = "";
     let isInitialLoad = true;
-    const msgTone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    let myPeer;
+    let currentCall;
 
-    // FIXED LOGIN
+    // --- LOGIN & PEER SETUP ---
     window.login = () => {
         const val = document.getElementById("phoneBox").value.trim().toLowerCase();
         if (val === "hadi" || val === "abdullah") {
@@ -96,14 +111,55 @@
             document.getElementById("auth-screen").style.display = "none";
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
-            if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
-            if (Notification.permission !== "granted") Notification.requestPermission();
+            if (val === "hadi") document.getElementById("admin-reset").style.display = "inline";
+            
+            setupPeer(val);
             startListening();
-        } else {
-            alert("Wrong code word!");
         }
     };
 
+    function setupPeer(userId) {
+        myPeer = new Peer(userId); // Your ID is now your login name
+        
+        myPeer.on('call', (call) => {
+            if(confirm("Incoming Voice Call from Friend?")) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    call.answer(stream);
+                    handleCall(call);
+                });
+            }
+        });
+    }
+
+    window.startVoiceCall = () => {
+        const friend = currentUser === "hadi" ? "abdullah" : "hadi";
+        document.getElementById("call-bar").style.display = "flex";
+        document.getElementById("call-status").innerText = "Calling " + friend + "...";
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const call = myPeer.call(friend, stream);
+            handleCall(call);
+        }).catch(err => alert("Please allow Mic access"));
+    };
+
+    function handleCall(call) {
+        currentCall = call;
+        document.getElementById("call-bar").style.display = "flex";
+        document.getElementById("call-status").innerText = "In Call";
+
+        call.on('stream', (remoteStream) => {
+            document.getElementById('remoteAudio').srcObject = remoteStream;
+        });
+        call.on('close', () => endCall());
+    }
+
+    window.endCall = () => {
+        if(currentCall) currentCall.close();
+        document.getElementById("call-bar").style.display = "none";
+        location.reload(); 
+    };
+
+    // --- CHAT & MEDIA FUNCTIONS (SAME AS BEFORE) ---
     window.sendText = async () => {
         const input = document.getElementById("text-in");
         if (!input.value.trim()) return;
@@ -115,37 +171,27 @@
     window.uploadMedia = () => {
         const file = document.getElementById("file-btn").files[0];
         if (!file) return;
-        const container = document.getElementById("upload-container");
-        const fill = document.getElementById("progress-fill");
-        const percentText = document.getElementById("percent");
-        container.style.display = "block";
+        const resourceType = file.type.startsWith('video') ? 'video' : 'image';
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", UPLOAD_PRESET);
+        
+        document.getElementById("upload-container").style.display = "block";
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, true);
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`, true);
         xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                fill.style.width = percent + "%";
-                percentText.innerText = percent + "%";
-            }
+            const percent = Math.round((e.loaded / e.total) * 100);
+            document.getElementById("progress-fill").style.width = percent + "%";
+            document.getElementById("percent").innerText = percent + "%";
         };
         xhr.onload = async () => {
             const data = JSON.parse(xhr.responseText);
-            await addDoc(collection(db, "chats"), { sender: currentUser, url: data.secure_url, type: data.resource_type, time: serverTimestamp() });
-            container.style.display = "none";
+            let finalUrl = data.secure_url;
+            if (resourceType === 'video') finalUrl = data.secure_url.replace(/\.[^/.]+$/, ".mp4");
+            await addDoc(collection(db, "chats"), { sender: currentUser, url: finalUrl, type: resourceType, time: serverTimestamp() });
+            document.getElementById("upload-container").style.display = "none";
         };
         xhr.send(formData);
-    };
-
-    window.masterReset = async () => {
-        if (!confirm("WIPE ALL DATA?")) return;
-        const q = query(collection(db, "chats"));
-        const snap = await getDocs(q);
-        const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(d.ref));
-        await batch.commit();
     };
 
     function startListening() {
@@ -153,48 +199,38 @@
         onSnapshot(q, (snap) => {
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
-            
-            snap.docChanges().forEach(change => {
-                if (change.type === "added" && !isInitialLoad) {
-                    const d = change.doc.data();
-                    if (d.sender !== currentUser) {
-                        msgTone.play().catch(() => {});
-                        if (Notification.permission === "granted") {
-                            new Notification(`From ${d.sender}`, { body: d.message || "Sent media" });
-                        }
-                    }
-                }
-            });
-
             snap.forEach(docSnap => {
                 const d = docSnap.data();
                 const div = document.createElement("div");
                 div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
-                
                 if (d.type === "text") {
                     const urlRegex = /(https?:\/\/[^\s]+)/g;
                     const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
                     const ytMatch = d.message.match(ytRegex);
-
                     if (ytMatch) {
-                        const videoId = ytMatch[1];
-                        div.innerHTML = `<div>${d.message.replace(urlRegex, (url) => `<a href="${url}" target="_blank">${url}</a>`)}</div>
-                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none; margin-top:10px;" 
-                                src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+                        div.innerHTML = `<div>${d.message.replace(urlRegex, u => `<a href="${u}" target="_blank">${u}</a>`)}</div>
+                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none; margin-top:10px;" src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
                     } else {
-                        div.innerHTML = d.message.replace(urlRegex, (url) => `<a href="${url}" target="_blank">${url}</a>`);
+                        div.innerHTML = d.message.replace(urlRegex, u => `<a href="${u}" target="_blank">${u}</a>`);
                     }
                 } else if (d.type === "image") {
-                    div.innerHTML = `<img src="${d.url}">`;
+                    div.innerHTML = `<img src="${d.url}" style="width:100%; border-radius:8px;">`;
                 } else if (d.type === "video") {
-                    div.innerHTML = `<video src="${d.url}" controls></video>`;
+                    div.innerHTML = `<video controls playsinline style="width:100%; border-radius:8px;"><source src="${d.url}" type="video/mp4"></video>`;
                 }
                 box.appendChild(div);
             });
-            isInitialLoad = false;
             box.scrollTop = box.scrollHeight;
         });
     }
+
+    window.masterReset = async () => {
+        if (!confirm("WIPE ALL?")) return;
+        const snap = await getDocs(query(collection(db, "chats")));
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+    };
 
     document.getElementById("text-in").addEventListener("keypress", (e) => { if(e.key === "Enter") window.sendText(); });
 </script>
