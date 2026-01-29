@@ -80,10 +80,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let currentUser = "";
-    let isFirstLoad = true;
     let typingTimeout;
-    
-    // Notification Sound
     const msgTone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
     window.login = () => {
@@ -93,14 +90,10 @@
             document.getElementById("auth-screen").style.display = "none";
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("user-display").innerText = val;
-            
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
 
-            // Trigger Browser Notification Request
-            if ("Notification" in window) {
-                Notification.requestPermission();
-            }
-
+            if ("Notification" in window) Notification.requestPermission();
+            
             startListening();
             listenForTyping();
         } else {
@@ -177,33 +170,47 @@
 
     function startListening() {
         const q = query(collection(db, "chats"), orderBy("time", "asc"));
+        
+        // This is the secret to stopping the spam:
         onSnapshot(q, (snap) => {
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
+            
+            snap.docChanges().forEach((change) => {
+                // Only trigger NOTIFICATION for NEW messages (added)
+                if (change.type === "added") {
+                    const d = change.doc.data();
+                    
+                    // Only notify if the sender is NOT the current user
+                    // AND it's not a historical message from the past load
+                    if (d.sender !== currentUser && d.time !== null) {
+                        const now = Date.now();
+                        const msgTime = d.time.toMillis();
+                        
+                        // Only ping if message is less than 10 seconds old
+                        if (now - msgTime < 10000) {
+                            msgTone.play().catch(() => {});
+                            if (Notification.permission === "granted") {
+                                new Notification(`Message from ${d.sender}`, {
+                                    body: d.message || "Sent a file",
+                                    icon: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Re-render the whole box to keep order
             snap.forEach(docSnap => {
                 const d = docSnap.data();
                 const div = document.createElement("div");
                 div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
-                
                 if (d.type === "text") div.innerText = d.message;
                 if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
                 if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
-                
                 box.appendChild(div);
-
-                // Notification Trigger (Sound + Banner)
-                if (!isFirstLoad && d.sender !== currentUser) {
-                    msgTone.play().catch(() => {}); // Play "Ping"
-                    
-                    if (Notification.permission === "granted") {
-                        new Notification("Private Chat", {
-                            body: `New ${d.type} from ${d.sender}`,
-                            icon: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
-                        });
-                    }
-                }
             });
-            isFirstLoad = false;
             box.scrollTop = box.scrollHeight;
         });
     }
