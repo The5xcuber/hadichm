@@ -168,17 +168,39 @@
             const box = document.getElementById("msg-box");
             box.innerHTML = "";
             
-            snap.docChanges().forEach(change => {
-                if (change.type === "added") {
-                    const d = change.doc.data();
-                    if (d.sender !== currentUser && !isInitialLoad) {
-                        msgTone.play().catch(() => {});
-                        if (Notification.permission === "granted") {
-                            new Notification(`Message from ${d.sender}`, { body: d.message || "Sent media" });
-                        }
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
+                const div = document.createElement("div");
+                div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
+
+                if (d.type === "text") {
+                    // 1. CHECK FOR YOUTUBE LINKS (Shorts or Regular)
+                    const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                    const match = d.message.match(ytRegex);
+
+                    if (match) {
+                        const videoId = match[1];
+                        div.innerHTML = `
+                            ${d.message}<br>
+                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; margin-top:10px; border:none;" 
+                                src="https://www.youtube.com/embed/${videoId}" 
+                                allowfullscreen>
+                            </iframe>`;
+                    } else {
+                        div.innerText = d.message;
                     }
                 }
+                
+                // Keep image/video logic as is
+                if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
+                if (d.type === "video") div.innerHTML = `<video src="${d.url}" controls></video>`;
+                
+                box.appendChild(div);
             });
+            isInitialLoad = false;
+            box.scrollTop = box.scrollHeight;
+        });
+    }
 
             snap.forEach(docSnap => {
                 const d = docSnap.data();
