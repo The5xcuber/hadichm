@@ -99,12 +99,26 @@
     };
 
     async function sendPush(msg) {
-        fetch('https://api.pushbullet.com/v2/pushes', {
+    const proxyUrl = "https://corsproxy.io/?"; // Free CORS proxy
+    const apiUrl = "https://api.pushbullet.com/v2/pushes";
+    
+    try {
+        await fetch(proxyUrl + encodeURIComponent(apiUrl), {
             method: 'POST',
-            headers: { 'Access-Token': PUSHBULLET_TOKEN, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'note', title: 'Private Chat', body: msg })
+            headers: { 
+                'Access-Token': PUSHBULLET_TOKEN, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ 
+                type: 'note', 
+                title: 'New Message', 
+                body: msg 
+            })
         });
+    } catch (e) { 
+        console.error("Push failed:", e); 
     }
+}
 
     async function setTypingStatus(isTyping) {
         await setDoc(doc(db, "status", currentUser), { typing: isTyping });
