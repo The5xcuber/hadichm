@@ -23,7 +23,6 @@
 
         #app { 
             width: 100%; 
-            /* ADAPTIVE WIDTH: Narrow on mobile, wider on PC */
             max-width: 800px; 
             background: var(--bg-deep); 
             display: flex; 
@@ -73,6 +72,15 @@
         .received { align-self: flex-start; background: var(--friend-msg-bg); border-bottom-left-radius: 2px; }
         .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 8px; cursor: pointer; }
 
+        /* NEW TYPING STYLE */
+        #typing-indicator { 
+            align-self: flex-start; 
+            font-size: 12px; 
+            color: var(--accent); 
+            padding: 5px 10px;
+            font-style: italic;
+        }
+
         /* --- INPUT --- */
         #input-area { 
             flex-shrink: 0;
@@ -104,7 +112,6 @@
         a { color: #53bdeb; text-decoration: none; }
         a:hover { text-decoration: underline; }
 
-        /* Custom Scrollbar for PC */
         #msg-box::-webkit-scrollbar { width: 6px; }
         #msg-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
@@ -130,13 +137,13 @@
                     <span id="status-text" style="color:var(--text-secondary)">Offline</span>
                 </div>
             </div>
-            <div id="typing-indicator" style="font-size: 12px; color: var(--accent); position: absolute; bottom: 5px; left: 77px;"></div>
             <button id="admin-reset" style="display:none; color:#ef5350; background:none; border:1px solid #ef5350; border-radius:4px; font-size:10px; padding:4px; cursor:pointer;" onclick="masterReset()">WIPE</button>
         </header>
 
         <div id="upload-container"><div class="progress-bg"><div id="progress-fill"></div></div></div>
 
-        <div id="msg-box"></div>
+        <div id="msg-box">
+            </div>
 
         <div id="input-area">
             <label style="font-size:26px; cursor:pointer;">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
@@ -181,14 +188,29 @@
     function listenToFriend() {
         onSnapshot(doc(db, "status", friendUser), (snap) => {
             const data = snap.data();
-            const dot = document.getElementById("status-dot"), text = document.getElementById("status-text"), typing = document.getElementById("typing-indicator");
+            const dot = document.getElementById("status-dot"), text = document.getElementById("status-text");
+            const box = document.getElementById("msg-box");
+            
+            // Check if typing indicator exists, if not create it inside msg-box
+            let typing = document.getElementById("typing-indicator");
+            if (!typing) {
+                typing = document.createElement("div");
+                typing.id = "typing-indicator";
+                box.appendChild(typing);
+            }
+
             if (data && data.online) { dot.style.background = "#25d366"; text.innerText = "Online"; text.style.color = "#25d366"; } 
             else { dot.style.background = "#8696a0"; text.innerText = "Offline"; text.style.color = "#8696a0"; }
-            typing.innerText = (data && data.typing) ? friendUser + " is typing..." : "";
+            
+            if (data && data.typing) {
+                typing.innerText = friendUser + " is typing...";
+                box.scrollTop = box.scrollHeight; // Auto-scroll to show it
+            } else {
+                typing.innerText = "";
+            }
         });
     }
 
-    // Typing Logic
     document.getElementById("text-in").addEventListener("input", () => {
         setDoc(doc(db, "status", currentUser), { typing: true }, { merge: true });
         clearTimeout(typingTimeout);
@@ -206,7 +228,11 @@
         onSnapshot(query(collection(db, "chats"), orderBy("time", "asc")), (snap) => {
             const box = document.getElementById("msg-box");
             let lastMsg = null;
+            
+            // Keep the typing indicator if it exists
+            const typing = document.getElementById("typing-indicator");
             box.innerHTML = "";
+            
             snap.forEach(docSnap => {
                 const d = docSnap.data(); lastMsg = d;
                 const div = document.createElement("div");
@@ -219,6 +245,10 @@
                 else if (d.type === "video") div.innerHTML = `<video controls playsinline><source src="${d.url}" type="video/mp4"></video>`;
                 box.appendChild(div);
             });
+
+            // Re-append typing indicator at the very bottom
+            if (typing) box.appendChild(typing);
+            
             box.scrollTop = box.scrollHeight;
             if (!isFirstLoad && lastMsg && lastMsg.sender !== currentUser) {
                 document.getElementById("notif-sound").play().catch(()=>{});
