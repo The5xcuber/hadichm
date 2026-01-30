@@ -1,108 +1,254 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>hadichm</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Chat With Chaudry</title>
     <style>
-        body { background-color: #0b141a; color: #e9edef; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        :root { --bg-deep: #111b21; --header-bg: #202c33; --input-bg: #2a3942; --my-msg-bg: #005c4b; --friend-msg-bg: #202c33; --text-primary: #e9edef; --text-secondary: #8696a0; --accent: #00a884; }
         
-        /* Login Screen */
-        #login { position: fixed; inset: 0; background: #0b141a; display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
-        input { background: #2a3942; border: none; padding: 15px; color: white; border-radius: 10px; outline: none; margin: 10px; }
-        button { background: #00a884; border: none; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-
-        /* Chat Layout */
-        #header { background: #202c33; padding: 15px; text-align: center; color: #00a884; font-weight: bold; }
-        #chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        .msg { max-width: 70%; padding: 10px; margin: 5px 0; border-radius: 10px; word-wrap: break-word; }
-        .sent { align-self: flex-end; background: #005c4b; }
-        .rcvd { align-self: flex-start; background: #202c33; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
+            background: radial-gradient(circle, #202c33 0%, #090e11 100%); 
+            color: var(--text-primary); 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            height: 100vh;
+            height: 100dvh; 
+            overflow: hidden; 
+        }
 
-        /* FIXED TYPING INDICATOR */
-        #typing-box { align-self: flex-start; color: #00a884; font-size: 13px; margin: 5px; display: none; }
+        #app { 
+            width: 100%; 
+            /* ADAPTIVE WIDTH: Narrow on mobile, wider on PC */
+            max-width: 800px; 
+            background: var(--bg-deep); 
+            display: flex; 
+            flex-direction: column; 
+            height: 100%;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
 
-        #input-bar { background: #202c33; padding: 15px; display: flex; }
-        #message-input { flex: 1; }
+        /* --- AUTH --- */
+        #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+        #phoneBox { padding: 15px; width: 280px; border: 1px solid #374045; border-radius: 25px; background: var(--input-bg); color: white; text-align: center; margin-bottom: 20px; outline: none; font-size: 16px; }
+
+        /* --- CHAT SCREEN --- */
+        #chat-screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+
+        header { 
+            flex-shrink: 0;
+            background: var(--header-bg); 
+            padding: 12px 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            z-index: 10;
+        }
+
+        .avatar { width: 45px; height: 45px; background: #607d8b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .header-info { flex: 1; }
+        #friend-name { font-weight: 600; font-size: 17px; color: white; display: block; }
+        .status-row { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 2px; }
+        #status-dot { width: 9px; height: 9px; border-radius: 50%; background: #8696a0; }
+
+        /* --- MESSAGES --- */
+        #msg-box { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); 
+            background-color: #0b141a; 
+            background-blend-mode: soft-light;
+        }
+
+        .bubble { padding: 10px 14px; border-radius: 12px; max-width: 75%; font-size: 15.5px; position: relative; line-height: 1.4; }
+        .sent { align-self: flex-end; background: var(--my-msg-bg); border-bottom-right-radius: 2px; }
+        .received { align-self: flex-start; background: var(--friend-msg-bg); border-bottom-left-radius: 2px; }
+        .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 8px; cursor: pointer; }
+
+        /* --- INPUT --- */
+        #input-area { 
+            flex-shrink: 0;
+            background: var(--header-bg); 
+            padding: 12px 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            padding-bottom: env(safe-area-inset-bottom, 12px);
+        }
+
+        #text-in { 
+            flex: 1; 
+            background: var(--input-bg); 
+            border: none; 
+            padding: 14px 20px; 
+            border-radius: 25px; 
+            color: white; 
+            outline: none; 
+            font-size: 16px; 
+        }
+
+        .btn { padding: 12px 25px; background: var(--accent); color: #111b21; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 15px; }
+
+        #upload-container { display: none; background: var(--header-bg); padding: 5px 20px; }
+        .progress-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
+        
+        a { color: #53bdeb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Custom Scrollbar for PC */
+        #msg-box::-webkit-scrollbar { width: 6px; }
+        #msg-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div id="login">
-    <h1>HADICHM</h1>
-    <input type="password" id="pass" placeholder="Passcode">
-    <button onclick="enter()">CONNECT</button>
+<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+
+<div id="app">
+    <div id="auth-screen">
+        <h2 style="color: #00a884; font-size: 28px;">Private Chat</h2>
+        <input type="text" id="phoneBox" placeholder="Enter code word...">
+        <button class="btn" onclick="login()">LOG IN</button>
+    </div>
+
+    <div id="chat-screen">
+        <header>
+            <div class="avatar">👤</div>
+            <div class="header-info">
+                <span id="friend-name">...</span>
+                <div class="status-row">
+                    <div id="status-dot"></div>
+                    <span id="status-text" style="color:var(--text-secondary)">Offline</span>
+                </div>
+            </div>
+            <div id="typing-indicator" style="font-size: 12px; color: var(--accent); position: absolute; bottom: 5px; left: 77px;"></div>
+            <button id="admin-reset" style="display:none; color:#ef5350; background:none; border:1px solid #ef5350; border-radius:4px; font-size:10px; padding:4px; cursor:pointer;" onclick="masterReset()">WIPE</button>
+        </header>
+
+        <div id="upload-container"><div class="progress-bg"><div id="progress-fill"></div></div></div>
+
+        <div id="msg-box"></div>
+
+        <div id="input-area">
+            <label style="font-size:26px; cursor:pointer;">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
+            <input type="text" id="text-in" placeholder="Type a message..." autocomplete="off">
+            <button class="btn" onclick="sendText()">➤</button>
+        </div>
+    </div>
 </div>
 
-<div id="header">PRIVATE TUNNEL</div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-<div id="chat-area">
-    <div id="typing-box">typing...</div>
-</div>
+    const firebaseConfig = { apiKey: "AIzaSyCaXxH4g_RJUazSlkimpHHOKFohn2MVMM8", authDomain: "chatwithchaudry.firebaseapp.com", projectId: "chatwithchaudry", storageBucket: "chatwithchaudry.firebasestorage.app", messagingSenderId: "874432806654", appId: "1:874432806654:web:cfd8fb88a25091e8722faf" };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let currentUser = "", friendUser = "", typingTimeout, isFirstLoad = true;
 
-<div id="input-bar">
-    <input type="text" id="message-input" placeholder="Type a message" oninput="sendTyping()">
-    <button onclick="sendMsg()">SEND</button>
-</div>
-
-<script>
-    // YOUR ORIGINAL FIREBASE CONFIG
-    const firebaseConfig = {
-        databaseURL: "YOUR_FIREBASE_URL_HERE" // Paste your actual URL here
+    window.login = () => {
+        const val = document.getElementById("phoneBox").value.trim();
+        if (val === "hadi" || val === "Abdullah") {
+            currentUser = val;
+            friendUser = (val === "hadi") ? "Abdullah" : "hadi";
+            document.getElementById("auth-screen").style.display = "none";
+            document.getElementById("chat-screen").style.display = "flex";
+            document.getElementById("friend-name").innerText = friendUser;
+            if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
+            
+            if ("Notification" in window && Notification.permission !== "granted") Notification.requestPermission();
+            
+            updateStatus(true);
+            startListening();
+            listenToFriend();
+        } else { alert("Wrong code!"); }
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    // LOGIN
-    function enter() {
-        let p = document.getElementById('pass').value;
-        if(p.toLowerCase() === 'hadi' || p.toLowerCase() === 'abdullah') {
-            document.getElementById('login').style.display = 'none';
-        } else { alert('Wrong code'); }
+    async function updateStatus(isOnline) { if (currentUser) await setDoc(doc(db, "status", currentUser), { online: isOnline }, { merge: true }); }
+    window.addEventListener("pagehide", () => updateStatus(false));
+    window.addEventListener("beforeunload", () => updateStatus(false));
+
+    function listenToFriend() {
+        onSnapshot(doc(db, "status", friendUser), (snap) => {
+            const data = snap.data();
+            const dot = document.getElementById("status-dot"), text = document.getElementById("status-text"), typing = document.getElementById("typing-indicator");
+            if (data && data.online) { dot.style.background = "#25d366"; text.innerText = "Online"; text.style.color = "#25d366"; } 
+            else { dot.style.background = "#8696a0"; text.innerText = "Offline"; text.style.color = "#8696a0"; }
+            typing.innerText = (data && data.typing) ? friendUser + " is typing..." : "";
+        });
     }
 
-    // TYPING LOGIC (FIXED)
-    function sendTyping() {
-        db.ref('status/').set({ typing: true });
-        setTimeout(() => db.ref('status/').set({ typing: false }), 2000);
-    }
-
-    db.ref('status/').on('value', (snap) => {
-        const tBox = document.getElementById('typing-box');
-        const chat = document.getElementById('chat-area');
-        if(snap.val().typing) {
-            tBox.style.display = 'block';
-            chat.scrollTop = chat.scrollHeight; // Auto-scroll to show typing
-        } else {
-            tBox.style.display = 'none';
-        }
+    // Typing Logic
+    document.getElementById("text-in").addEventListener("input", () => {
+        setDoc(doc(db, "status", currentUser), { typing: true }, { merge: true });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => { setDoc(doc(db, "status", currentUser), { typing: false }, { merge: true }); }, 2000);
     });
 
-    // MESSAGE LOGIC
-    function sendMsg() {
-        let text = document.getElementById('message-input').value;
-        if(text) {
-            db.ref('messages/').push({ text: text, user: 'hadi' });
-            document.getElementById('message-input').value = '';
-        }
+    window.sendText = async () => {
+        const input = document.getElementById("text-in");
+        if (!input.value.trim()) return;
+        const msg = input.value; input.value = "";
+        await addDoc(collection(db, "chats"), { sender: currentUser, message: msg, type: "text", time: serverTimestamp() });
+    };
+
+    function startListening() {
+        onSnapshot(query(collection(db, "chats"), orderBy("time", "asc")), (snap) => {
+            const box = document.getElementById("msg-box");
+            let lastMsg = null;
+            box.innerHTML = "";
+            snap.forEach(docSnap => {
+                const d = docSnap.data(); lastMsg = d;
+                const div = document.createElement("div");
+                div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
+                if (d.type === "text") {
+                    const urlRegex = /(https?:\/\/[^\s]+)/g;
+                    div.innerHTML = d.message.replace(urlRegex, u => `<a href="${u}" target="_blank">${u}</a>`);
+                }
+                else if (d.type === "image") div.innerHTML = `<img src="${d.url}" onclick="window.open('${d.url}')">`;
+                else if (d.type === "video") div.innerHTML = `<video controls playsinline><source src="${d.url}" type="video/mp4"></video>`;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+            if (!isFirstLoad && lastMsg && lastMsg.sender !== currentUser) {
+                document.getElementById("notif-sound").play().catch(()=>{});
+                if (document.hidden && Notification.permission === "granted") new Notification(friendUser, { body: lastMsg.message || "Sent a file" });
+            }
+            isFirstLoad = false;
+        });
     }
 
-    db.ref('messages/').on('child_added', (snap) => {
-        let data = snap.val();
-        let div = document.createElement('div');
-        div.classList.add('msg');
-        div.classList.add(data.user === 'hadi' ? 'sent' : 'rcvd');
-        div.innerText = data.text;
-        
-        // Insert BEFORE typing box
-        let chat = document.getElementById('chat-area');
-        let tBox = document.getElementById('typing-box');
-        chat.insertBefore(div, tBox);
-        chat.scrollTop = chat.scrollHeight;
-    });
+    window.uploadMedia = () => {
+        const file = document.getElementById("file-btn").files[0];
+        if (!file) return;
+        document.getElementById("upload-container").style.display = "block";
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", "ml_default");
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/dhaydp4rq/${file.type.startsWith('video')?'video':'image'}/upload`, true);
+        xhr.upload.onprogress = (e) => { document.getElementById("progress-fill").style.width = Math.round((e.loaded / e.total) * 100) + "%"; };
+        xhr.onload = async () => {
+            let url = JSON.parse(xhr.responseText).secure_url;
+            if (file.type.startsWith('video')) url = url.replace(/\.[^/.]+$/, ".mp4");
+            await addDoc(collection(db, "chats"), { sender: currentUser, url, type: file.type.startsWith('video')?'video':'image', time: serverTimestamp() });
+            document.getElementById("upload-container").style.display = "none";
+        };
+        xhr.send(formData);
+    };
+
+    window.masterReset = async () => { if (confirm("Wipe chat?")) { const s = await getDocs(collection(db, "chats")); const b = writeBatch(db); s.forEach(d => b.delete(d.ref)); await b.commit(); } };
+    document.getElementById("text-in").addEventListener("keypress", (e) => { if(e.key === "Enter") window.sendText(); });
 </script>
-
 </body>
 </html>
