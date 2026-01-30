@@ -4,314 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Private Chat With Chaudry</title>
-    
     <link rel="icon" type="image/x-icon" href="favicon.ico?v=1">
-
     <style>
-        /* --- MODERN RESET & VARIABLES --- */
-        :root { 
-            --bg-deep: #111b21; 
-            --header-bg: #202c33; 
-            --input-bg: #2a3942;
-            --my-msg-bg: #005c4b; 
-            --friend-msg-bg: #202c33; 
-            --text-primary: #e9edef;
-            --text-secondary: #8696a0;
-            --accent: #00a884; 
-            --danger: #ef5350;
-            --online: #25d366; /* WhatsApp Green for Online */
-        }
-
+        :root { --bg-deep: #111b21; --header-bg: #202c33; --input-bg: #2a3942; --my-msg-bg: #005c4b; --friend-msg-bg: #202c33; --text-primary: #e9edef; --text-secondary: #8696a0; --accent: #00a884; }
         * { box-sizing: border-box; }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background: #090e11; 
-            color: var(--text-primary); 
-            margin: 0; 
-            display: flex; 
-            justify-content: center; 
-            height: 100vh; 
-            overflow: hidden; 
-        }
-
-        #app { 
-            width: 100%; 
-            max-width: 600px; 
-            background: var(--bg-deep); 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            position: relative;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-        }
-
-        /* --- AUTH SCREEN --- */
-        #auth-screen { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            padding: 30px; 
-            background: radial-gradient(circle at top, #1f2c34, #111b21);
-            z-index: 100;
-            transition: opacity 0.5s ease;
-        }
-
-        #auth-screen h2 {
-            font-size: 28px;
-            margin-bottom: 30px;
-            letter-spacing: 1px;
-            text-shadow: 0 0 15px rgba(0, 168, 132, 0.4);
-        }
-
-        #phoneBox { 
-            padding: 15px 20px; 
-            width: 100%; 
-            max-width: 300px;
-            border: 1px solid #374045; 
-            border-radius: 25px; 
-            background: var(--input-bg); 
-            color: white; 
-            font-size: 16px;
-            text-align: center;
-            margin-bottom: 20px; 
-            outline: none; 
-            transition: all 0.3s;
-        }
-
-        #phoneBox:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2);
-        }
-
-        /* --- CHAT SCREEN --- */
-        #chat-screen { 
-            display: none; 
-            flex-direction: column; 
-            height: 100%; 
-            opacity: 0;
-            animation: fadeIn 0.5s forwards;
-        }
-
-        @keyframes fadeIn { to { opacity: 1; } }
-
-        /* --- HEADER --- */
-        header { 
-            background: var(--header-bg); 
-            padding: 15px 20px; 
-            border-bottom: 1px solid rgba(255,255,255,0.05); 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            z-index: 10;
-        }
-
-        .header-top { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-
-        .user-info {
-            display: flex; 
-            flex-direction: column;
-        }
-
-        #status-display {
-            font-size: 12px;
-            color: var(--text-secondary);
-            transition: color 0.3s ease;
-            font-weight: 500;
-        }
-
-        #typing-indicator { 
-            font-size: 13px; 
-            color: var(--accent); 
-            height: 18px; 
-            margin-top: 4px; 
-            font-weight: 500;
-            opacity: 0.9;
-        }
-
-        #admin-reset {
-            background: rgba(239, 83, 80, 0.1);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: bold;
-            border-radius: 6px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        #admin-reset:hover { background: var(--danger); color: white; }
-
-        /* --- MESSAGE AREA --- */
-        #msg-box { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 20px 15px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 4px; 
-            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
-            background-repeat: repeat;
-            background-size: 400px;
-            background-blend-mode: soft-light;
-            background-color: #0b141a;
-            scroll-behavior: smooth;
-        }
-
-        #msg-box::-webkit-scrollbar { width: 6px; }
-        #msg-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-
-        .bubble { 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            max-width: 80%; 
-            font-size: 15px; 
-            line-height: 1.4;
-            position: relative; 
-            word-wrap: break-word; 
-            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
-            margin-bottom: 2px;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: translateY(10px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .sent { 
-            align-self: flex-end; 
-            background: var(--my-msg-bg); 
-            border-top-right-radius: 0;
-            margin-right: 5px;
-        }
-        
-        .sent::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: -8px;
-            width: 8px;
-            height: 13px;
-            background: linear-gradient(to bottom left, rgba(0,0,0,0) 50%, var(--my-msg-bg) 50%);
-        }
-
-        .received { 
-            align-self: flex-start; 
-            background: var(--friend-msg-bg); 
-            border-top-left-radius: 0;
-            margin-left: 5px;
-        }
-
-        .received::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -8px;
-            width: 8px;
-            height: 13px;
-            background: linear-gradient(to bottom right, rgba(0,0,0,0) 50%, var(--friend-msg-bg) 50%);
-        }
-
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #090e11; color: var(--text-primary); margin: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        #app { width: 100%; max-width: 600px; background: var(--bg-deep); display: flex; flex-direction: column; height: 100vh; position: relative; }
+        #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; background: radial-gradient(circle at top, #1f2c34, #111b21); z-index: 100; }
+        #phoneBox { padding: 15px; width: 80%; border: 1px solid #374045; border-radius: 25px; background: var(--input-bg); color: white; text-align: center; margin-bottom: 20px; outline: none; }
+        #chat-screen { display: none; flex-direction: column; height: 100%; animation: fadeIn 0.4s forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        header { background: var(--header-bg); padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 40px; height: 40px; background: #607d8b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .header-info { flex: 1; display: flex; flex-direction: column; }
+        #friend-name { font-weight: 600; font-size: 16px; color: white; }
+        .status-row { display: flex; align-items: center; gap: 5px; font-size: 12px; margin-top: 2px; }
+        #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #8696a0; }
+        #status-text { color: var(--text-secondary); }
+        #typing-indicator { font-size: 12px; color: var(--accent); height: 14px; margin-top: 2px; font-weight: 500; }
+        #msg-box { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 5px; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); background-color: #0b141a; background-blend-mode: soft-light; }
+        .bubble { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 15px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+        .sent { align-self: flex-end; background: var(--my-msg-bg); border-top-right-radius: 0; }
+        .received { align-self: flex-start; background: var(--friend-msg-bg); border-top-left-radius: 0; }
         .bubble img, .bubble video { max-width: 100%; border-radius: 6px; margin-top: 5px; display: block; }
-
-        /* --- INPUT AREA --- */
-        #input-area { 
-            background: var(--header-bg); 
-            padding: 10px 15px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            z-index: 10;
-        }
-
-        #text-in { 
-            flex: 1; 
-            background: var(--input-bg); 
-            border: none; 
-            padding: 12px 18px; 
-            border-radius: 25px; 
-            color: white; 
-            outline: none; 
-            font-size: 15px;
-            transition: background 0.2s;
-        }
-        
-        #text-in:focus { background: #35424b; }
-
-        .btn { 
-            padding: 10px 24px; 
-            background: var(--accent); 
-            color: #111b21; 
-            border: none; 
-            border-radius: 25px; 
-            cursor: pointer; 
-            font-weight: 700; 
-            font-size: 14px;
-            transition: transform 0.1s, filter 0.2s;
-        }
-
-        .btn:active { transform: scale(0.95); }
-        .btn:hover { filter: brightness(1.1); }
-
-        label[for="file-btn"] {
-            font-size: 22px;
-            color: var(--text-secondary);
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-        }
-        label[for="file-btn"]:hover { color: var(--text-primary); transform: rotate(15deg); }
-
-        #upload-container { display: none; background: var(--header-bg); padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .progress-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 8px; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; box-shadow: 0 0 10px var(--accent); }
-
-        a { color: #53bdeb; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        #input-area { background: var(--header-bg); padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
+        #text-in { flex: 1; background: var(--input-bg); border: none; padding: 12px 18px; border-radius: 25px; color: white; outline: none; }
+        .btn { padding: 10px 20px; background: var(--accent); color: #111b21; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        #upload-container { display: none; background: var(--header-bg); padding: 10px 20px; border-bottom: 1px solid var(--accent); }
+        .progress-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 5px; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
+        a { color: #53bdeb; }
     </style>
 </head>
 <body>
+
+<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
 <div id="app">
     <div id="auth-screen">
         <h2 style="color: #00a884;">Private Chat</h2>
         <input type="text" id="phoneBox" placeholder="Enter code word...">
-        <button class="btn" onclick="login()">ENTER CHAT</button>
+        <button class="btn" onclick="login()">ENTER</button>
     </div>
 
     <div id="chat-screen">
         <header>
-            <div class="header-top">
-                <span style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 35px; height: 35px; background: #607d8b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">👤</div>
-                    <div class="user-info">
-                        <span id="user-display" style="color: white; font-size: 16px;"></span>
-                        <span id="status-display">Offline</span>
-                    </div>
-                </span>
-                <button id="admin-reset" style="display:none;" onclick="masterReset()">Wipe</button>
+            <div class="avatar">👤</div>
+            <div class="header-info">
+                <span id="friend-name">Loading...</span>
+                <div class="status-row">
+                    <div id="status-dot"></div>
+                    <span id="status-text">Offline</span>
+                </div>
+                <div id="typing-indicator"></div>
             </div>
-            <div id="typing-indicator"></div>
+            <button id="admin-reset" style="display:none; background:none; border:1px solid #ef5350; color:#ef5350; padding:4px 8px; border-radius:4px; font-size:10px;" onclick="masterReset()">RESET</button>
         </header>
-        
-        <div id="upload-container">
-            <div style="font-size:12px; margin-bottom:4px; display: flex; justify-content: space-between;">
-                <span>Uploading Media...</span>
-                <span id="percent" style="color: var(--accent);">0%</span>
-            </div>
-            <div class="progress-bg"><div id="progress-fill"></div></div>
-        </div>
-
+        <div id="upload-container"><div class="progress-bg"><div id="progress-fill"></div></div></div>
         <div id="msg-box"></div>
-
         <div id="input-area">
-            <label for="file-btn">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
+            <label style="cursor:pointer; font-size:22px;">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
             <input type="text" id="text-in" placeholder="Type a message..." oninput="handleTyping()">
             <button class="btn" onclick="sendText()">➤</button>
         </div>
@@ -322,182 +74,108 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, getDocs, writeBatch, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCaXxH4g_RJUazSlkimpHHOKFohn2MVMM8",
-        authDomain: "chatwithchaudry.firebaseapp.com",
-        projectId: "chatwithchaudry",
-        storageBucket: "chatwithchaudry.firebasestorage.app",
-        messagingSenderId: "874432806654",
-        appId: "1:874432806654:web:cfd8fb88a25091e8722faf"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyCaXxH4g_RJUazSlkimpHHOKFohn2MVMM8", authDomain: "chatwithchaudry.firebaseapp.com", projectId: "chatwithchaudry", storageBucket: "chatwithchaudry.firebasestorage.app", messagingSenderId: "874432806654", appId: "1:874432806654:web:cfd8fb88a25091e8722faf" };
     const CLOUD_NAME = "dhaydp4rq";
     const UPLOAD_PRESET = "ml_default"; 
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    let currentUser = "";
-    let typingTimeout;
+    let currentUser = "", friendUser = "", typingTimeout, isFirstLoad = true;
 
-    // --- LOGIN ---
     window.login = () => {
         const val = document.getElementById("phoneBox").value.trim();
         if (val === "hadi" || val === "Abdullah") {
             currentUser = val;
-            
-            // UI Transitions
-            document.getElementById("auth-screen").style.opacity = "0";
-            setTimeout(() => {
-                document.getElementById("auth-screen").style.display = "none";
-                document.getElementById("chat-screen").style.display = "flex";
-            }, 500);
-            
-            document.getElementById("user-display").innerText = val;
+            friendUser = (val === "hadi") ? "Abdullah" : "hadi";
+            document.getElementById("auth-screen").style.display = "none";
+            document.getElementById("chat-screen").style.display = "flex";
+            document.getElementById("friend-name").innerText = friendUser;
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
             
-            // Start Systems
-            updateStatus(true); // Set self to online
+            // Notification Permission
+            if (Notification.permission !== "granted") Notification.requestPermission();
+            
+            updateStatus(true);
             startListening();
-            listenToFriendStatus(); // Listen if friend is online
-        } else {
-            alert("Wrong code word!");
-        }
+            listenToFriend();
+        } else { alert("Wrong code!"); }
     };
 
-    // --- ONLINE/OFFLINE STATUS SYSTEM ---
-    async function updateStatus(isOnline) {
-        // Updates your own status in the database
-        if (!currentUser) return;
-        await setDoc(doc(db, "status", currentUser), { 
-            online: isOnline,
-            lastSeen: serverTimestamp()
-        }, { merge: true });
-    }
-
-    // Set offline when tab closes
-    window.addEventListener("pagehide", () => updateStatus(false));
+    async function updateStatus(isOnline) { if (currentUser) await setDoc(doc(db, "status", currentUser), { online: isOnline }, { merge: true }); }
     window.addEventListener("beforeunload", () => updateStatus(false));
 
-    function listenToFriendStatus() {
-        const friend = currentUser === "hadi" ? "Abdullah" : "hadi";
-        const statusDisplay = document.getElementById("status-display");
-
-        onSnapshot(doc(db, "status", friend), (snap) => {
-            if (snap.exists() && snap.data().online) {
-                statusDisplay.innerText = "Online";
-                statusDisplay.style.color = "#25d366"; // Green
-            } else {
-                statusDisplay.innerText = "Offline";
-                statusDisplay.style.color = "#8696a0"; // Grey
-            }
-            
-            // Handle typing separately to keep logic clean
-            if (snap.exists() && snap.data().typing) {
-                document.getElementById("typing-indicator").innerText = friend + " is typing...";
-            } else {
-                document.getElementById("typing-indicator").innerText = "";
-            }
+    function listenToFriend() {
+        onSnapshot(doc(db, "status", friendUser), (snap) => {
+            const data = snap.data();
+            const dot = document.getElementById("status-dot"), text = document.getElementById("status-text"), typing = document.getElementById("typing-indicator");
+            if (data && data.online) { dot.style.background = "#25d366"; text.innerText = "Online"; text.style.color = "#25d366"; } 
+            else { dot.style.background = "#8696a0"; text.innerText = "Offline"; text.style.color = "#8696a0"; }
+            typing.innerText = (data && data.typing) ? friendUser + " is typing..." : "";
         });
     }
 
-    // --- TYPING FEATURE ---
     window.handleTyping = () => {
         setDoc(doc(db, "status", currentUser), { typing: true }, { merge: true });
         clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            setDoc(doc(db, "status", currentUser), { typing: false }, { merge: true });
-        }, 2000);
+        typingTimeout = setTimeout(() => { setDoc(doc(db, "status", currentUser), { typing: false }, { merge: true }); }, 2000);
     };
 
-    // --- CHAT LOGIC ---
     window.sendText = async () => {
         const input = document.getElementById("text-in");
         if (!input.value.trim()) return;
-        const msg = input.value;
-        input.value = "";
+        const msg = input.value; input.value = "";
         await addDoc(collection(db, "chats"), { sender: currentUser, message: msg, type: "text", time: serverTimestamp() });
     };
 
-    // --- MEDIA UPLOAD ---
-    window.uploadMedia = () => {
-        const file = document.getElementById("file-btn").files[0];
-        if (!file) return;
-
-        const container = document.getElementById("upload-container");
-        const fill = document.getElementById("progress-fill");
-        container.style.display = "block";
-
-        const resourceType = file.type.startsWith('video') ? 'video' : 'image';
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", UPLOAD_PRESET);
-
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`, true);
-
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                fill.style.width = percent + "%";
-                document.getElementById("percent").innerText = percent + "%";
-            }
-        };
-
-        xhr.onload = async () => {
-            const data = JSON.parse(xhr.responseText);
-            let finalUrl = data.secure_url;
-            if (resourceType === 'video') {
-                finalUrl = data.secure_url.replace(/\.[^/.]+$/, ".mp4");
-            }
-            await addDoc(collection(db, "chats"), { sender: currentUser, url: finalUrl, type: resourceType, time: serverTimestamp() });
-            container.style.display = "none";
-            fill.style.width = "0%";
-        };
-        xhr.send(formData);
-    };
-
     function startListening() {
-        const q = query(collection(db, "chats"), orderBy("time", "asc"));
-        onSnapshot(q, (snap) => {
+        onSnapshot(query(collection(db, "chats"), orderBy("time", "asc")), (snap) => {
             const box = document.getElementById("msg-box");
+            let lastMsg = null;
             box.innerHTML = "";
-            
             snap.forEach(docSnap => {
                 const d = docSnap.data();
+                lastMsg = d;
                 const div = document.createElement("div");
                 div.className = `bubble ${d.sender === currentUser ? 'sent' : 'received'}`;
-                
-                if (d.type === "text") {
-                    const urlRegex = /(https?:\/\/[^\s]+)/g;
-                    const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-                    const ytMatch = d.message.match(ytRegex);
-
-                    if (ytMatch) {
-                        div.innerHTML = `<div>${d.message.replace(urlRegex, u => `<a href="${u}" target="_blank">${u}</a>`)}</div>
-                            <iframe style="width:100%; aspect-ratio:16/9; border-radius:8px; border:none; margin-top:10px;" src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
-                    } else {
-                        div.innerHTML = d.message.replace(urlRegex, u => `<a href="${u}" target="_blank">${u}</a>`);
-                    }
-                } else if (d.type === "image") {
-                    div.innerHTML = `<img src="${d.url}">`;
-                } else if (d.type === "video") {
-                    div.innerHTML = `<video controls playsinline><source src="${d.url}" type="video/mp4"></video>`;
-                }
+                if (d.type === "text") div.innerText = d.message;
+                else if (d.type === "image") div.innerHTML = `<img src="${d.url}">`;
+                else if (d.type === "video") div.innerHTML = `<video controls playsinline><source src="${d.url}" type="video/mp4"></video>`;
                 box.appendChild(div);
             });
             box.scrollTop = box.scrollHeight;
+
+            // Notification Logic
+            if (!isFirstLoad && lastMsg && lastMsg.sender !== currentUser) {
+                document.getElementById("notif-sound").play();
+                if (document.hidden) {
+                    document.title = "(1) New Message!";
+                    if (Notification.permission === "granted") new Notification("New message from " + friendUser, { body: lastMsg.message || "Sent a file" });
+                }
+            }
+            isFirstLoad = false;
         });
     }
 
-    window.masterReset = async () => {
-        if (!confirm("WIPE ALL DATA?")) return;
-        const snap = await getDocs(query(collection(db, "chats")));
-        const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-    };
+    window.addEventListener("focus", () => { document.title = "Private Chat With Chaudry"; });
 
-    document.getElementById("text-in").addEventListener("keypress", (e) => { if(e.key === "Enter") window.sendText(); });
+    window.uploadMedia = () => {
+        const file = document.getElementById("file-btn").files[0];
+        if (!file) return;
+        document.getElementById("upload-container").style.display = "block";
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", UPLOAD_PRESET);
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${file.type.startsWith('video')?'video':'image'}/upload`, true);
+        xhr.upload.onprogress = (e) => { document.getElementById("progress-fill").style.width = Math.round((e.loaded / e.total) * 100) + "%"; };
+        xhr.onload = async () => {
+            let url = JSON.parse(xhr.responseText).secure_url;
+            if (file.type.startsWith('video')) url = url.replace(/\.[^/.]+$/, ".mp4");
+            await addDoc(collection(db, "chats"), { sender: currentUser, url, type: file.type.startsWith('video')?'video':'image', time: serverTimestamp() });
+            document.getElementById("upload-container").style.display = "none";
+        };
+        xhr.send(formData);
+    };
 </script>
 </body>
 </html>
