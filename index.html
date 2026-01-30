@@ -31,11 +31,9 @@
             box-shadow: 0 0 30px rgba(0,0,0,0.5);
         }
 
-        /* --- AUTH --- */
         #auth-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
         #phoneBox { padding: 15px; width: 280px; border: 1px solid #374045; border-radius: 25px; background: var(--input-bg); color: white; text-align: center; margin-bottom: 20px; outline: none; font-size: 16px; }
 
-        /* --- CHAT SCREEN --- */
         #chat-screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
 
         header { 
@@ -54,7 +52,6 @@
         .status-row { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 2px; }
         #status-dot { width: 9px; height: 9px; border-radius: 50%; background: #8696a0; }
 
-        /* --- MESSAGES --- */
         #msg-box { 
             flex: 1; 
             overflow-y: auto; 
@@ -72,16 +69,9 @@
         .received { align-self: flex-start; background: var(--friend-msg-bg); border-bottom-left-radius: 2px; }
         .bubble img, .bubble video { max-width: 100%; border-radius: 8px; margin-top: 8px; cursor: pointer; }
 
-        /* NEW TYPING STYLE */
-        #typing-indicator { 
-            align-self: flex-start; 
-            font-size: 12px; 
-            color: var(--accent); 
-            padding: 5px 10px;
-            font-style: italic;
-        }
+        /* FIX: Typing indicator styled for inside the msg-box */
+        #typing-indicator { align-self: flex-start; font-size: 12px; color: var(--accent); padding: 5px; font-style: italic; }
 
-        /* --- INPUT --- */
         #input-area { 
             flex-shrink: 0;
             background: var(--header-bg); 
@@ -104,14 +94,10 @@
         }
 
         .btn { padding: 12px 25px; background: var(--accent); color: #111b21; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 15px; }
-
         #upload-container { display: none; background: var(--header-bg); padding: 5px 20px; }
         .progress-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; }
         #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
-        
         a { color: #53bdeb; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-
         #msg-box::-webkit-scrollbar { width: 6px; }
         #msg-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
     </style>
@@ -141,9 +127,7 @@
         </header>
 
         <div id="upload-container"><div class="progress-bg"><div id="progress-fill"></div></div></div>
-
-        <div id="msg-box">
-            </div>
+        <div id="msg-box"></div>
 
         <div id="input-area">
             <label style="font-size:26px; cursor:pointer;">📎<input type="file" id="file-btn" hidden onchange="uploadMedia()"></label>
@@ -172,9 +156,7 @@
             document.getElementById("chat-screen").style.display = "flex";
             document.getElementById("friend-name").innerText = friendUser;
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
-            
             if ("Notification" in window && Notification.permission !== "granted") Notification.requestPermission();
-            
             updateStatus(true);
             startListening();
             listenToFriend();
@@ -188,26 +170,15 @@
     function listenToFriend() {
         onSnapshot(doc(db, "status", friendUser), (snap) => {
             const data = snap.data();
-            const dot = document.getElementById("status-dot"), text = document.getElementById("status-text");
-            const box = document.getElementById("msg-box");
-            
-            // Check if typing indicator exists, if not create it inside msg-box
+            const dot = document.getElementById("status-dot"), text = document.getElementById("status-text"), box = document.getElementById("msg-box");
             let typing = document.getElementById("typing-indicator");
-            if (!typing) {
-                typing = document.createElement("div");
-                typing.id = "typing-indicator";
-                box.appendChild(typing);
-            }
+            if (!typing) { typing = document.createElement("div"); typing.id = "typing-indicator"; box.appendChild(typing); }
 
             if (data && data.online) { dot.style.background = "#25d366"; text.innerText = "Online"; text.style.color = "#25d366"; } 
             else { dot.style.background = "#8696a0"; text.innerText = "Offline"; text.style.color = "#8696a0"; }
             
-            if (data && data.typing) {
-                typing.innerText = friendUser + " is typing...";
-                box.scrollTop = box.scrollHeight; // Auto-scroll to show it
-            } else {
-                typing.innerText = "";
-            }
+            if (data && data.typing) { typing.innerText = friendUser + " is typing..."; box.scrollTop = box.scrollHeight; }
+            else { typing.innerText = ""; }
         });
     }
 
@@ -228,11 +199,8 @@
         onSnapshot(query(collection(db, "chats"), orderBy("time", "asc")), (snap) => {
             const box = document.getElementById("msg-box");
             let lastMsg = null;
-            
-            // Keep the typing indicator if it exists
             const typing = document.getElementById("typing-indicator");
             box.innerHTML = "";
-            
             snap.forEach(docSnap => {
                 const d = docSnap.data(); lastMsg = d;
                 const div = document.createElement("div");
@@ -243,12 +211,10 @@
                 }
                 else if (d.type === "image") div.innerHTML = `<img src="${d.url}" onclick="window.open('${d.url}')">`;
                 else if (d.type === "video") div.innerHTML = `<video controls playsinline><source src="${d.url}" type="video/mp4"></video>`;
+                else if (d.type === "file") div.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:5px"><span>📄</span><div style="overflow:hidden"><div style="font-size:11px;opacity:0.7;overflow:hidden;text-overflow:ellipsis">${d.fileName||'File'}</div><a href="${d.url}" target="_blank" style="color:var(--accent);font-weight:bold;font-size:13px">DOWNLOAD</a></div></div>`;
                 box.appendChild(div);
             });
-
-            // Re-append typing indicator at the very bottom
             if (typing) box.appendChild(typing);
-            
             box.scrollTop = box.scrollHeight;
             if (!isFirstLoad && lastMsg && lastMsg.sender !== currentUser) {
                 document.getElementById("notif-sound").play().catch(()=>{});
@@ -266,13 +232,17 @@
         formData.append("file", file);
         formData.append("upload_preset", "ml_default");
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/dhaydp4rq/${file.type.startsWith('video')?'video':'image'}/upload`, true);
+        // FIX: Using 'auto' and 'file' parameter name for JPG/RAW support
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/dhaydp4rq/auto/upload`, true);
         xhr.upload.onprogress = (e) => { document.getElementById("progress-fill").style.width = Math.round((e.loaded / e.total) * 100) + "%"; };
         xhr.onload = async () => {
-            let url = JSON.parse(xhr.responseText).secure_url;
-            if (file.type.startsWith('video')) url = url.replace(/\.[^/.]+$/, ".mp4");
-            await addDoc(collection(db, "chats"), { sender: currentUser, url, type: file.type.startsWith('video')?'video':'image', time: serverTimestamp() });
+            const res = JSON.parse(xhr.responseText);
+            let url = res.secure_url;
+            let type = res.resource_type === 'video' ? 'video' : (res.resource_type === 'image' ? 'image' : 'file');
+            if (type === 'video') url = url.replace(/\.[^/.]+$/, ".mp4");
+            await addDoc(collection(db, "chats"), { sender: currentUser, url, type, fileName: file.name, time: serverTimestamp() });
             document.getElementById("upload-container").style.display = "none";
+            document.getElementById("file-btn").value = "";
         };
         xhr.send(formData);
     };
