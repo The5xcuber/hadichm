@@ -19,7 +19,7 @@
             --text-secondary: #8696a0;
             --accent: #00a884; 
             --danger: #ef5350;
-            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            --online: #25d366; /* WhatsApp Green for Online */
         }
 
         * { box-sizing: border-box; }
@@ -35,7 +35,6 @@
             overflow: hidden; 
         }
 
-        /* --- APP CONTAINER --- */
         #app { 
             width: 100%; 
             max-width: 600px; 
@@ -47,7 +46,7 @@
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* --- AUTH SCREEN (Glassmorphism) --- */
+        /* --- AUTH SCREEN --- */
         #auth-screen { 
             flex: 1; 
             display: flex; 
@@ -111,6 +110,17 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
+        }
+
+        .user-info {
+            display: flex; 
+            flex-direction: column;
+        }
+
+        #status-display {
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
             font-weight: 500;
         }
 
@@ -121,10 +131,8 @@
             margin-top: 4px; 
             font-weight: 500;
             opacity: 0.9;
-            transition: opacity 0.3s;
         }
 
-        /* --- RESET BUTTON --- */
         #admin-reset {
             background: rgba(239, 83, 80, 0.1);
             color: var(--danger);
@@ -134,6 +142,7 @@
             font-weight: bold;
             border-radius: 6px;
             text-transform: uppercase;
+            cursor: pointer;
             transition: 0.2s;
         }
         #admin-reset:hover { background: var(--danger); color: white; }
@@ -146,7 +155,6 @@
             display: flex; 
             flex-direction: column; 
             gap: 4px; 
-            /* WhatsApp Doodle Background Pattern */
             background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
             background-repeat: repeat;
             background-size: 400px;
@@ -155,11 +163,9 @@
             scroll-behavior: smooth;
         }
 
-        /* Custom Scrollbar */
         #msg-box::-webkit-scrollbar { width: 6px; }
         #msg-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
-        /* --- BUBBLES --- */
         .bubble { 
             padding: 8px 12px; 
             border-radius: 8px; 
@@ -185,7 +191,6 @@
             margin-right: 5px;
         }
         
-        /* Little tail for sent messages */
         .sent::before {
             content: "";
             position: absolute;
@@ -203,7 +208,6 @@
             margin-left: 5px;
         }
 
-        /* Little tail for received messages */
         .received::before {
             content: "";
             position: absolute;
@@ -214,12 +218,7 @@
             background: linear-gradient(to bottom right, rgba(0,0,0,0) 50%, var(--friend-msg-bg) 50%);
         }
 
-        .bubble img, .bubble video { 
-            max-width: 100%; 
-            border-radius: 6px; 
-            margin-top: 5px; 
-            display: block; 
-        }
+        .bubble img, .bubble video { max-width: 100%; border-radius: 6px; margin-top: 5px; display: block; }
 
         /* --- INPUT AREA --- */
         #input-area { 
@@ -260,7 +259,6 @@
         .btn:active { transform: scale(0.95); }
         .btn:hover { filter: brightness(1.1); }
 
-        /* Clip Icon styling */
         label[for="file-btn"] {
             font-size: 22px;
             color: var(--text-secondary);
@@ -270,28 +268,9 @@
         }
         label[for="file-btn"]:hover { color: var(--text-primary); transform: rotate(15deg); }
 
-        /* --- UPLOAD BAR --- */
-        #upload-container { 
-            display: none; 
-            background: var(--header-bg); 
-            padding: 10px 20px; 
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .progress-bg { 
-            width: 100%; 
-            height: 4px; 
-            background: rgba(255,255,255,0.1); 
-            border-radius: 2px; 
-            overflow: hidden; 
-            margin-top: 8px; 
-        }
-        #progress-fill { 
-            width: 0%; 
-            height: 100%; 
-            background: var(--accent); 
-            transition: width 0.3s ease-out; 
-            box-shadow: 0 0 10px var(--accent);
-        }
+        #upload-container { display: none; background: var(--header-bg); padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .progress-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; box-shadow: 0 0 10px var(--accent); }
 
         a { color: #53bdeb; text-decoration: none; }
         a:hover { text-decoration: underline; }
@@ -311,12 +290,12 @@
             <div class="header-top">
                 <span style="display: flex; align-items: center; gap: 10px;">
                     <div style="width: 35px; height: 35px; background: #607d8b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">👤</div>
-                    <div style="display: flex; flex-direction: column;">
+                    <div class="user-info">
                         <span id="user-display" style="color: white; font-size: 16px;"></span>
-                        <span style="font-size: 11px; color: var(--text-secondary);">Online</span>
+                        <span id="status-display">Offline</span>
                     </div>
                 </span>
-                <button id="admin-reset" style="display:none;" onclick="masterReset()">Wipe Server</button>
+                <button id="admin-reset" style="display:none;" onclick="masterReset()">Wipe</button>
             </div>
             <div id="typing-indicator"></div>
         </header>
@@ -365,32 +344,54 @@
         const val = document.getElementById("phoneBox").value.trim();
         if (val === "hadi" || val === "Abdullah") {
             currentUser = val;
+            
+            // UI Transitions
             document.getElementById("auth-screen").style.opacity = "0";
             setTimeout(() => {
                 document.getElementById("auth-screen").style.display = "none";
                 document.getElementById("chat-screen").style.display = "flex";
-            }, 500); // Wait for animation
+            }, 500);
+            
             document.getElementById("user-display").innerText = val;
             if (val === "hadi") document.getElementById("admin-reset").style.display = "block";
+            
+            // Start Systems
+            updateStatus(true); // Set self to online
             startListening();
-            listenToTyping();
+            listenToFriendStatus(); // Listen if friend is online
         } else {
             alert("Wrong code word!");
         }
     };
 
-    // --- TYPING FEATURE ---
-    window.handleTyping = () => {
-        setDoc(doc(db, "status", currentUser), { typing: true });
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            setDoc(doc(db, "status", currentUser), { typing: false });
-        }, 2000);
-    };
+    // --- ONLINE/OFFLINE STATUS SYSTEM ---
+    async function updateStatus(isOnline) {
+        // Updates your own status in the database
+        if (!currentUser) return;
+        await setDoc(doc(db, "status", currentUser), { 
+            online: isOnline,
+            lastSeen: serverTimestamp()
+        }, { merge: true });
+    }
 
-    function listenToTyping() {
+    // Set offline when tab closes
+    window.addEventListener("pagehide", () => updateStatus(false));
+    window.addEventListener("beforeunload", () => updateStatus(false));
+
+    function listenToFriendStatus() {
         const friend = currentUser === "hadi" ? "Abdullah" : "hadi";
+        const statusDisplay = document.getElementById("status-display");
+
         onSnapshot(doc(db, "status", friend), (snap) => {
+            if (snap.exists() && snap.data().online) {
+                statusDisplay.innerText = "Online";
+                statusDisplay.style.color = "#25d366"; // Green
+            } else {
+                statusDisplay.innerText = "Offline";
+                statusDisplay.style.color = "#8696a0"; // Grey
+            }
+            
+            // Handle typing separately to keep logic clean
             if (snap.exists() && snap.data().typing) {
                 document.getElementById("typing-indicator").innerText = friend + " is typing...";
             } else {
@@ -398,6 +399,15 @@
             }
         });
     }
+
+    // --- TYPING FEATURE ---
+    window.handleTyping = () => {
+        setDoc(doc(db, "status", currentUser), { typing: true }, { merge: true });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            setDoc(doc(db, "status", currentUser), { typing: false }, { merge: true });
+        }, 2000);
+    };
 
     // --- CHAT LOGIC ---
     window.sendText = async () => {
@@ -441,7 +451,7 @@
             }
             await addDoc(collection(db, "chats"), { sender: currentUser, url: finalUrl, type: resourceType, time: serverTimestamp() });
             container.style.display = "none";
-            fill.style.width = "0%"; // Reset bar
+            fill.style.width = "0%";
         };
         xhr.send(formData);
     };
